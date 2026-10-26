@@ -1,0 +1,563 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "run_at": "2026-10-26 18:46 UTC",
+  "n_cases": 15,
+  "max_steps": 4,
+  "systems": {
+    "agent": {
+      "cases": 15,
+      "appeal_cases": 10,
+      "abstain_cases": 5,
+      "errors": 0,
+      "pool_recall": 0.9375,
+      "citation_correctness": 1.0,
+      "citations_proposed": 18,
+      "claims_proposed": 15,
+      "unsupported_claim_rate_proposed": 0.0667,
+      "claims_shipped": 14,
+      "unsupported_claim_rate_shipped": 0.0,
+      "answer_correctness_appeal": 0.4,
+      "evidence_coverage_appeal": 0.5625,
+      "abstention_correct": 0.8,
+      "false_abstention_rate": 0.3,
+      "mean_model_calls": 4.53,
+      "per_case": [
+        {
+          "case": "C01",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 1,
+          "covered": 0,
+          "shipped": 0,
+          "error": null,
+          "why": "gave no appeal points; never retrieved 4.1 (page 4); retrieved but not cited 4.2 (page 4)",
+          "claims": []
+        },
+        {
+          "case": "C02",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 1,
+          "shipped": 2,
+          "error": null,
+          "why": "retrieved but not cited 3.2 (page 3)",
+          "claims": [
+            {
+              "claim": "The policy was ported from another insurer without a break.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            },
+            {
+              "claim": "Waiting periods already served are credited to the insured person when a policy is ported from another insurer.",
+              "supported": true,
+              "cites": [
+                "page 3, clause 3.6"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C03",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 1,
+          "shipped": 3,
+          "error": null,
+          "why": "retrieved but not cited 6.2 (page 6)",
+          "claims": [
+            {
+              "claim": "The insurer rejected the claim because the claims desk was informed 26 hours after admission rather than within the 24-hour window.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            },
+            {
+              "claim": "The delay in informing the claims desk occurred because the patient was in the intensive care unit and the family could not call earlier.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            },
+            {
+              "claim": "The policy provides that a delay in giving notice or documents may be condoned if the insured person shows a reasonable cause for the delay.",
+              "supported": true,
+              "cites": [
+                "page 6, clause 6.4"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C04",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 2,
+          "shipped": 3,
+          "error": null,
+          "why": null,
+          "claims": [
+            {
+              "claim": "The insurer received the last necessary document on 01/07/2026 and the claim of Rs. 62,000 is still pending.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            },
+            {
+              "claim": "The insurer must settle or reject a claim within 30 days of receiving the last necessary document.",
+              "supported": true,
+              "cites": [
+                "page 6, clause 6.6"
+              ]
+            },
+            {
+              "claim": "If the insurer does not settle an admitted claim within the period in clause 6.6, it pays interest on the amount at 2% above the bank rate from the date of receiving the last necessary document.",
+              "supported": true,
+              "cites": [
+                "page 6, clause 6.8"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C05",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 0,
+          "shipped": 0,
+          "error": null,
+          "why": "gave no appeal points; retrieved but not cited 6.7 (page 6)",
+          "claims": []
+        },
+        {
+          "case": "C06",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null,
+          "why": null,
+          "claims": [
+            {
+              "claim": "The insurer requested additional documents 20 days after receiving the claim, which exceeds the 7-day limit specified in the policy.",
+              "supported": true,
+              "cites": [
+                "page 1",
+                "page 6, clause 6.5"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C07",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 1,
+          "shipped": 1,
+          "error": null,
+          "why": "retrieved but not cited letter (page 8)",
+          "claims": [
+            {
+              "claim": "Day care procedures listed in Annexure A are covered irrespective of the duration of the stay in hospital.",
+              "supported": true,
+              "cites": [
+                "page 2, clause 2.4"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C08",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 0,
+          "shipped": 0,
+          "error": null,
+          "why": "gave no appeal points; retrieved but not cited 4.3 (page 4)",
+          "claims": []
+        },
+        {
+          "case": "C09",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 2,
+          "shipped": 1,
+          "error": null,
+          "why": null,
+          "claims": [
+            {
+              "claim": "The initial waiting period does not apply to claims arising from an accident.",
+              "supported": true,
+              "cites": [
+                "page 3, clause 3.1",
+                "page 3, clause 3.5"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C10",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null,
+          "why": null,
+          "claims": [
+            {
+              "claim": "The policy has been in continuous force for more than 60 months since 01/03/2020, meaning that under the moratorium clause, no claim can be contested on grounds of non-disclosure or misrepresentation ",
+              "supported": true,
+              "cites": [
+                "page 1",
+                "page 7, clause 7.2"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "A01",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        },
+        {
+          "case": "A02",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        },
+        {
+          "case": "A03",
+          "kind": "abstain",
+          "correct": false,
+          "shipped": 2,
+          "error": null,
+          "why": "gave 2 appeal point(s) where the evidence is not enough"
+        },
+        {
+          "case": "A04",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        },
+        {
+          "case": "A05",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        }
+      ]
+    },
+    "baseline": {
+      "cases": 15,
+      "appeal_cases": 10,
+      "abstain_cases": 5,
+      "errors": 0,
+      "pool_recall": 0.625,
+      "citation_correctness": 1.0,
+      "citations_proposed": 14,
+      "claims_proposed": 13,
+      "unsupported_claim_rate_proposed": 0.0,
+      "claims_shipped": 13,
+      "unsupported_claim_rate_shipped": 0.0,
+      "answer_correctness_appeal": 0.3,
+      "evidence_coverage_appeal": 0.375,
+      "abstention_correct": 1.0,
+      "false_abstention_rate": 0.2,
+      "mean_model_calls": 1.0,
+      "per_case": [
+        {
+          "case": "C01",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 0,
+          "shipped": 2,
+          "error": null,
+          "why": "retrieved but not cited 4.1 (page 4), 4.2 (page 4)",
+          "claims": [
+            {
+              "claim": "The insurer applied a proportionate deduction under clause 4.2 to all related expenses including surgeon fees because the private room was charged at Rs. 4,500 per day.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            },
+            {
+              "claim": "The claim of Rs. 1,80,000 for the admission from 02/09/2026 to 06/09/2026 was settled at Rs. 1,05,000.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C02",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 1,
+          "shipped": 2,
+          "error": null,
+          "why": "retrieved but not cited 3.2 (page 3)",
+          "claims": [
+            {
+              "claim": "The policyholder ported the policy from another insurer without a break.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            },
+            {
+              "claim": "Waiting periods already served are credited to the insured person when a policy is ported from another insurer.",
+              "supported": true,
+              "cites": [
+                "page 3, clause 3.6"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C03",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 1,
+          "covered": 0,
+          "shipped": 2,
+          "error": null,
+          "why": "never retrieved 6.4 (page 6); retrieved but not cited 6.2 (page 6)",
+          "claims": [
+            {
+              "claim": "The insurer rejected the claim because the claims desk was informed 26 hours after admission, which exceeded the 24-hour notification window for emergency admissions under clause 6.2.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            },
+            {
+              "claim": "The delay in informing the claims desk occurred because the patient was in the intensive care unit and the family could not call earlier.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C04",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 2,
+          "shipped": 3,
+          "error": null,
+          "why": null,
+          "claims": [
+            {
+              "claim": "The insurer acknowledges receiving the last necessary document on 01/07/2026 for the claim of Rs. 62,000, and the claim remains unsettled.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            },
+            {
+              "claim": "The insurer is required under clause 6.6 to settle or reject a claim within 30 days of receiving the last necessary document.",
+              "supported": true,
+              "cites": [
+                "page 6, clause 6.6"
+              ]
+            },
+            {
+              "claim": "Under clause 6.8, if the insurer does not settle an admitted claim within the period in clause 6.6, they must pay interest on the amount at 2% above the bank rate from the date of receiving the last n",
+              "supported": true,
+              "cites": [
+                "page 6, clause 6.8"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C05",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 1,
+          "in_pool": 0,
+          "covered": 0,
+          "shipped": 0,
+          "error": null,
+          "why": "gave no appeal points; never retrieved 6.7 (page 6)",
+          "claims": []
+        },
+        {
+          "case": "C06",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null,
+          "why": null,
+          "claims": [
+            {
+              "claim": "The insurer may ask for additional documents within 7 days of receiving the claim and must give the reason for each request in writing.",
+              "supported": true,
+              "cites": [
+                "page 6, clause 6.5"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C07",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 0,
+          "covered": 0,
+          "shipped": 0,
+          "error": null,
+          "why": "gave no appeal points; never retrieved 2.4 (page 2), letter (page 8)",
+          "claims": []
+        },
+        {
+          "case": "C08",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null,
+          "why": null,
+          "claims": [
+            {
+              "claim": "The policyholder entered the policy at the age of 52, which contradicts clause 4.3 that applies a 10% co-payment for an insured person aged 60 years or more at entry.",
+              "supported": true,
+              "cites": [
+                "page 1",
+                "page 4, clause 4.3"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C09",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null,
+          "why": "never retrieved 3.5 (page 3)",
+          "claims": [
+            {
+              "claim": "The initial waiting period clause does not apply to claims arising from an accident.",
+              "supported": true,
+              "cites": [
+                "page 3, clause 3.1"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "C10",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 1,
+          "in_pool": 0,
+          "covered": 0,
+          "shipped": 1,
+          "error": null,
+          "why": "never retrieved 7.2 (page 7)",
+          "claims": [
+            {
+              "claim": "The policy has been in force continuously since March 1, 2020.",
+              "supported": true,
+              "cites": [
+                "page 1"
+              ]
+            }
+          ]
+        },
+        {
+          "case": "A01",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        },
+        {
+          "case": "A02",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        },
+        {
+          "case": "A03",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        },
+        {
+          "case": "A04",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        },
+        {
+          "case": "A05",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null,
+          "why": null
+        }
+      ]
+    }
+  },
+  "caveat": "The policy and the cases are synthetic and were written by the same person, the set is small, and one model on one run is one sample. Read these as a check that the system behaves as designed, not as a general accuracy figure."
+}
