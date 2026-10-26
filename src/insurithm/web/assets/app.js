@@ -32,6 +32,7 @@ const DROP_REASONS = {
   no_citations: "No policy passage was cited for this point.",
   no_valid_citation: "The cited passage could not be found in the policy.",
   claim_not_supported_by_quote: "The cited passage does not match what the point says.",
+  cites_only_the_letter: "This point rests only on the rejection letter, with no policy passage behind it.",
   missing_claim: "The model's output for this point was unusable.",
   malformed_finding: "The model's output for this point was unusable.",
 };

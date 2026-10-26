@@ -119,3 +119,47 @@ def test_citations_to_chunks_outside_the_pool_are_rejected(pool):
     small_pool = {k: v for k, v in pool.items() if k != chunk.chunk_id}
     cit = check_citation(chunk.chunk_id, "settle or reject a claim within 30 days", small_pool)
     assert not cit.valid and cit.reason == "unknown_chunk"
+
+
+# ----------------------------------------------------------------------------- the letter is not the policy
+LETTER = "Your claim is settled at Rs. 70,000. You may appeal within 30 days of this letter. The room was above the limit."
+
+
+@pytest.fixture(scope="module")
+def pool_with_letter(pool):
+    from insurithm.agent.workflow import letter_chunks
+    from insurithm.models import Chunk
+
+    letter = {cid: Chunk(**c) for cid, c in letter_chunks("t1", LETTER).items()}
+    return {**pool, **letter}, next(iter(letter))
+
+
+def test_a_point_that_cites_only_the_letter_has_no_policy_behind_it(pool_with_letter):
+    pool, letter_id = pool_with_letter
+    finding = {"claim": "The letter says you may appeal within 30 days.",
+               "citations": [{"chunk_id": letter_id, "quote": "You may appeal within 30 days of this letter"}]}
+    checked = verify_finding(finding, pool)
+    assert not checked.supported and checked.reason == "cites_only_the_letter"
+    assert checked.citations[0].valid                     # the quote is real; it is just not the policy
+    assert verify_findings([finding], pool).outcome == "insufficient_evidence"
+
+
+def test_a_point_that_cites_the_letter_and_the_policy_is_supported(pool_with_letter):
+    pool, letter_id = pool_with_letter
+    policy = by_clause(pool, "6.2")
+    finding = {"claim": "The letter says you may appeal within 30 days and the policy requires the claims desk to be informed within 24 hours of admission.",
+               "citations": [{"chunk_id": letter_id, "quote": "You may appeal within 30 days of this letter"},
+                             {"chunk_id": policy.chunk_id, "quote": "the claims desk must be informed within 24 hours of admission"}]}
+    checked = verify_finding(finding, pool)
+    assert checked.supported, checked.reason
+    assert verify_findings([finding], pool).outcome == "draft_ready"
+
+
+def test_an_invalid_policy_quote_does_not_borrow_support_from_a_valid_letter_quote(pool_with_letter):
+    pool, letter_id = pool_with_letter
+    policy = by_clause(pool, "6.2")
+    finding = {"claim": "The policy requires notice within 48 hours and the letter says you may appeal within 30 days.",
+               "citations": [{"chunk_id": letter_id, "quote": "You may appeal within 30 days of this letter"},
+                             {"chunk_id": policy.chunk_id, "quote": "must be informed within 48 hours of admission"}]}
+    checked = verify_finding(finding, pool)
+    assert not checked.supported and checked.reason == "cites_only_the_letter"

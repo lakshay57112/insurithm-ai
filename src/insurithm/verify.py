@@ -5,10 +5,13 @@ it proposes is trusted until this module has checked it:
 
 * the cited chunk must be one the agent actually retrieved (the *evidence pool*),
 * the quote must appear verbatim in that chunk (whitespace may differ, wording may not),
+* at least one valid citation must be to the policy: the rejection letter is in
+  the evidence pool so that facts can be read from it, but a point that rests
+  only on the insurer's own letter has no policy behind it,
 * the claim must share enough vocabulary with its valid quotes to rule out an
   obviously unrelated citation.
 
-A finding with no valid citation is dropped from the output and reported as
+A finding that fails any of these is dropped from the output and reported as
 unsupported. If nothing survives, the system answers "insufficient evidence".
 
 What this does NOT do: prove that a quote *entails* a claim. The overlap test is
@@ -28,6 +31,7 @@ from .retrieval import tokenize
 MIN_QUOTE_CHARS = 12
 MAX_CLAIM_CHARS = 600
 DEFAULT_MIN_OVERLAP = 0.2
+LETTER_DOC_PREFIX = "letter-"  # chunks cut from the rejection letter, as opposed to the policy
 
 
 @dataclass(frozen=True)
@@ -153,6 +157,9 @@ def verify_finding(
     valid = [c for c in checked if c.valid]
     if not valid:
         return CheckedFinding(claim=claim, supported=False, citations=checked, reason="no_valid_citation")
+
+    if all(str(c.doc_id).startswith(LETTER_DOC_PREFIX) for c in valid):
+        return CheckedFinding(claim=claim, supported=False, citations=checked, reason="cites_only_the_letter")
 
     overlap = _overlap(claim, [c.quote for c in valid])
     if overlap < min_overlap:

@@ -43,7 +43,7 @@ async def test_happy_path_pauses_for_review_then_records_the_decision(tools, tmp
         assert 'Evidence (policy synthetic_health_policy, page 4, clause 4.2)' in text
         assert "rejection letter, page 1" in text
         assert "interest" not in text.lower() and "experimental" not in text.lower()
-        assert {d["reason"] for d in review["dropped_findings"]} == {"no_valid_citation", "no_citations"}
+        assert {d["reason"] for d in review["dropped_findings"]} == {"no_valid_citation", "no_citations", "cites_only_the_letter"}
         assert "Claim NHA/CL/2026/00417" in text and "Policy FFP-889120" in text
         assert "Open points" in text and "Documents to gather" in text
         assert "Nothing has been sent" in text

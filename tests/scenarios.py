@@ -50,15 +50,22 @@ def draft_reply(case_id: str) -> dict:
                 "citations": [{"chunk_id": C41, "quote": "Room rent is limited to a single private room up to 1% of the Sum Insured per day"}],
             },
             {
-                "claim": "The insurer's letter says the deduction was applied because the room occupied was above the permitted limit.",
-                "citations": [{"chunk_id": letter_chunk_id(case_id), "quote": "because the room occupied was above the permitted limit"}],
+                "claim": "The insurer says the deduction was applied because the room occupied was above the permitted limit, but clause 4.2 allows a deduction only when the room is above the limit in clause 4.1.",
+                "citations": [
+                    {"chunk_id": letter_chunk_id(case_id), "quote": "because the room occupied was above the permitted limit"},
+                    {"chunk_id": C42, "quote": "If the insured person occupies a room above the limit in clause 4.1, all related expenses"},
+                ],
             },
-            # Two findings the verifier must drop:
+            # Three findings the verifier must drop:
             {
                 "claim": "The insurer must pay 12% interest on any delayed amount.",
                 "citations": [{"chunk_id": C68, "quote": "we must pay interest at 12% per annum on all delays"}],
             },
             {"claim": "The policy covers experimental treatment.", "citations": []},
+            {
+                "claim": "The insurer's letter says an appeal may be made within 30 days.",
+                "citations": [{"chunk_id": letter_chunk_id(case_id), "quote": "You may appeal within 30 days of this letter"}],
+            },
         ],
         "gaps": ["The room category actually occupied is not stated in the letter."],
         "documents_to_gather": ["Hospital bill showing the room category and daily rent"],

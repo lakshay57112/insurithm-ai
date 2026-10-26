@@ -73,16 +73,41 @@ class CaseRun:
         return cls(**data)
 
 
-def code_fingerprint() -> str:
-    """Changes whenever the code that produces results changes, so results from older code are never mixed in."""
+def fingerprinted_files() -> list[Path]:
+    """The code that decides what the model sees and says. verify.py is left out on purpose: checking runs on the
+    model's saved output (see reverify), so a change to the checker does not need new model calls."""
     root = Path(__file__).resolve().parent.parent
-    files = sorted([*(root / "agent").glob("*.py"), *(root / "mcp_servers").glob("*.py"),
-                    *(root / n for n in ("verify.py", "retrieval.py", "facts.py", "ingest.py", "models.py"))])
+    return sorted([*(root / "agent").glob("*.py"), *(root / "mcp_servers").glob("*.py"),
+                   *(root / n for n in ("retrieval.py", "facts.py", "ingest.py", "models.py"))])
+
+
+def code_fingerprint() -> str:
+    """Changes whenever the code that shapes the model's output changes, so results from older code are never mixed in."""
+    files = fingerprinted_files()
     digest = hashlib.sha256()
     for f in files:
         digest.update(f.name.encode())
         digest.update(f.read_bytes().replace(b"\r\n", b"\n"))  # same hash whether git checked out CRLF or LF
     return digest.hexdigest()[:16]
+
+
+def reverify(run: "CaseRun", min_overlap: float = DEFAULT_MIN_OVERLAP) -> "CaseRun":
+    """Check the findings the model proposed again with the current checker, without asking the model again.
+
+    This is what lets saved results follow a change to the checker. A change to anything that shapes what the
+    model sees or says (prompts, tools, retrieval) needs new model calls instead, and code_fingerprint covers that.
+    """
+    if run.error:
+        return run
+    proposed = [
+        {"claim": f["claim"], "citations": [{"chunk_id": c["chunk_id"], "quote": c["quote"]} for c in f["citations"]]}
+        for f in run.raw
+    ]
+    result = verify_findings(proposed, {k: Chunk(**v) for k, v in run.pool.items()}, min_overlap)
+    checked = [f.to_dict() for f in (*result.supported, *result.unsupported)]
+    run.raw = checked
+    run.shipped = checked if run.system == "baseline" else [f.to_dict() for f in result.supported]  # the baseline has no checker
+    return run
 
 
 class QuotaStopped(RuntimeError):
@@ -92,18 +117,20 @@ class QuotaStopped(RuntimeError):
 class Progress:
     """Finished cases, saved after each one, so a run that stopped can carry on where it left off."""
 
-    def __init__(self, path: Path | None, key: str, resume: bool = False):
+    def __init__(self, path: Path | None, key: str, resume: bool = False, accept_any_key: bool = False):
         self.path, self.key = path, key
         self.ignored = False  # True when a saved file was found but belongs to other code, model, settings or cases
+        self.key_matched = False  # True when what was loaded was made by exactly this code, model and settings
         self.runs: dict[str, dict[str, CaseRun]] = {}
         if path and resume and path.exists():
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 data = {}
-            if isinstance(data, dict) and data.get("key") != key:
+            if isinstance(data, dict) and data.get("key") != key and not accept_any_key:
                 self.ignored = True
-            if isinstance(data, dict) and data.get("key") == key:  # same code, model, settings and cases
+            if isinstance(data, dict) and (data.get("key") == key or accept_any_key):  # same code, model, settings and cases
+                self.key_matched = data.get("key") == key
                 self.runs = {
                     system: {cid: CaseRun.from_dict(r) for cid, r in cases.items()}
                     for system, cases in data.get("runs", {}).items()
@@ -158,6 +185,13 @@ def _cites(run: CaseRun, finding: dict[str, Any]) -> list[str]:
     return out
 
 
+def _detail(run: CaseRun) -> dict[str, Any]:
+    return {
+        "claims": [{"claim": f["claim"][:200], "supported": f["supported"], "cites": _cites(run, f)} for f in run.shipped],
+        "rejected": [{"claim": f["claim"][:200], "reason": f.get("reason")} for f in run.raw if not f["supported"]],
+    }
+
+
 def _rate(num: int, den: int) -> float | None:
     return round(num / den, 4) if den else None
 
@@ -196,13 +230,14 @@ def score(cases: list[dict[str, Any]], runs: list[CaseRun]) -> dict[str, Any]:
             why = "; ".join(parts)
         per_case.append({"case": r.case_id, "kind": "appeal", "correct": ok, "expected": len(expected),
                          "in_pool": in_pool, "covered": covered, "shipped": len(r.shipped), "error": r.error, "why": why,
-                         "claims": [{"claim": f["claim"][:200], "supported": f["supported"], "cites": _cites(r, f)} for f in r.shipped]})
+                         **_detail(r)})
     correct_abstain = 0
     for r in abstain:
         ok = (not r.error) and not r.shipped
         correct_abstain += ok
         why = None if ok else (f"error: {r.error}" if r.error else f"gave {len(r.shipped)} appeal point(s) where the evidence is not enough")
-        per_case.append({"case": r.case_id, "kind": "abstain", "correct": ok, "shipped": len(r.shipped), "error": r.error, "why": why})
+        per_case.append({"case": r.case_id, "kind": "abstain", "correct": ok, "shipped": len(r.shipped), "error": r.error,
+                         "why": why, **_detail(r)})
 
     raw_claims = sum(len(r.raw) for r in runs)
     raw_unsupported = sum(1 for r in runs for f in r.raw if not f["supported"])
@@ -248,7 +283,7 @@ async def run_baseline_system(
     runs = []
     for c in cases:
         if c["id"] in done:
-            runs.append(done[c["id"]])
+            runs.append(reverify(done[c["id"]], min_overlap))
             continue
         counting = CountingLLM(llm)
         run = CaseRun(c["id"], "baseline")
@@ -278,7 +313,7 @@ async def run_agent_system(
     async with Tools.local(work_dir / "tracker.sqlite") as tools:
         for c in cases:
             if c["id"] in done:
-                runs.append(done[c["id"]])
+                runs.append(reverify(done[c["id"]], min_overlap))
                 continue
             counting = CountingLLM(llm)
             case_id = f"eval-{c['id'].lower()}"
@@ -374,6 +409,13 @@ async def compare(
     }
 
 
+class NoModel:
+    """Used when re-checking saved results: every case must already be saved, so the model is never asked."""
+
+    async def complete_json(self, stage: str, system: str, prompt: str) -> dict[str, Any]:
+        raise AssertionError("re-checking saved results must not call the model")
+
+
 class ProgressLLM:
     """Wraps another LLM and prints one line per call, so a slow run shows that it is working."""
 
@@ -424,16 +466,36 @@ def main() -> None:
     parser.add_argument("--min-interval", type=float, default=5.0, help="seconds between model calls (free-tier rate limits)")
     parser.add_argument("--out-dir", default=str(REPORT_DIR))
     parser.add_argument("--resume", action="store_true", help="reuse cases finished by an earlier run of this same command and retry the rest")
+    parser.add_argument("--recheck-saved", action="store_true",
+                        help="no model calls: check the findings an earlier run saved again with the current checker, and write a separate "
+                             "rechecked_<model> report (set GEMINI_MODEL to the model that produced them; no key is needed)")
     args = parser.parse_args()
 
-    base = GeminiLLM.from_env()
-    llm = ProgressLLM(ThrottledLLM(base, args.min_interval))
+    if args.recheck_saved:
+        model_name = os.environ.get("GEMINI_MODEL", "").strip().removeprefix("models/")
+        if not model_name:
+            sys.exit("Set GEMINI_MODEL to the model that produced the saved results (no API key is needed for this).")
+        base, llm = None, NoModel()
+    else:
+        base = GeminiLLM.from_env()
+        model_name = base.model
+        llm = ProgressLLM(ThrottledLLM(base, args.min_interval))
     cases = load_cases(args.cases)[: args.limit]
     out_dir = Path(args.out_dir)
-    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", base.model)
-    key = hashlib.sha256(json.dumps([code_fingerprint(), base.model, args.max_steps, DEFAULT_MIN_OVERLAP, [(c["id"], c["letter"]) for c in cases]]).encode()).hexdigest()
-    progress = Progress(out_dir / f"progress_{slug}.json", key, args.resume)
-    print(f"Running {len(cases)} case(s) with {base.model}. Each model call is listed below.", file=sys.stderr, flush=True)
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", model_name)
+    key = hashlib.sha256(json.dumps([code_fingerprint(), model_name, args.max_steps, DEFAULT_MIN_OVERLAP, [(c["id"], c["letter"]) for c in cases]]).encode()).hexdigest()
+    progress = Progress(out_dir / f"progress_{slug}.json", key, args.resume or args.recheck_saved, accept_any_key=args.recheck_saved)
+    if args.recheck_saved:
+        missing = [f"{system} {c['id']}" for system in args.systems for c in cases if c["id"] not in progress.done(system)]
+        if missing:
+            sys.exit(f"Nothing saved for: {', '.join(missing)}. Finish those with a normal run (add --resume) first.")
+        print(f"Re-checking {len(cases)} saved case(s) from {model_name} with the current checker. No model calls are made.",
+              file=sys.stderr, flush=True)
+        if not progress.key_matched:
+            print("Note: the saved results were made by a different version of the code than the one checked out. The checker "
+                  "is applied fresh, but what the model said is from the saved run.", file=sys.stderr, flush=True)
+    else:
+        print(f"Running {len(cases)} case(s) with {model_name}. Each model call is listed below.", file=sys.stderr, flush=True)
     if args.resume and progress.ignored:
         print("The saved progress was made with different code, model, settings or cases, so it was ignored "
               "and everything runs again.", file=sys.stderr, flush=True)
@@ -442,9 +504,10 @@ def main() -> None:
 
     async def go() -> dict[str, Any]:
         try:
-            return await compare(llm, base.model, tuple(args.systems), cases, args.max_steps, progress=progress)
+            return await compare(llm, model_name, tuple(args.systems), cases, args.max_steps, progress=progress)
         finally:
-            await base.aclose()
+            if base is not None:
+                await base.aclose()
 
     try:
         report = asyncio.run(go())
@@ -456,7 +519,7 @@ def main() -> None:
         sys.exit(2)
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    stem = "comparison_" + slug
+    stem = ("rechecked_" if args.recheck_saved else "comparison_") + slug
     (out_dir / f"{stem}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     (out_dir / f"{stem}.md").write_text(render_markdown(report), encoding="utf-8")
     print(render_markdown(report))

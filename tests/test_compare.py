@@ -293,3 +293,100 @@ def test_saved_progress_from_other_code_is_flagged_and_not_used(tmp_path):
     assert stale.ignored and stale.done("agent") == {}
     assert not Progress(path, "old-code", resume=True).ignored
     assert not Progress(tmp_path / "missing.json", "k", resume=True).ignored
+
+
+# ----------------------------------------------------------------------------- saved drafts follow the checker
+def saved_run(system, letter_only_supported=True, case_id="C01"):
+    """What a run saved before the checker refused letter-only points looked like."""
+    policy = {"chunk_id": "pol-c1", "doc_id": "pol", "page": 4, "clause_id": "4.2", "section": None, "start_char": 0, "end_char": 10,
+              "text": "A proportionate deduction applies if the insured person occupies a room above the limit."}
+    letter = {"chunk_id": "letter-x-p1-c0", "doc_id": "letter-x", "page": 1, "clause_id": None, "section": None, "start_char": 0, "end_char": 10,
+              "text": "You may appeal within 30 days of this letter."}
+    cit = lambda c, q: {"chunk_id": c["chunk_id"], "quote": q, "valid": True, "doc_id": c["doc_id"], "page": c["page"], "clause_id": c["clause_id"]}
+    good = {"claim": "A proportionate deduction applies if the insured person occupies a room above the limit.", "supported": True,
+            "citations": [cit(policy, "A proportionate deduction applies if the insured person occupies a room above the limit")]}
+    only_letter = {"claim": "You may appeal within 30 days of this letter.", "supported": letter_only_supported,
+                   "citations": [cit(letter, "You may appeal within 30 days of this letter")]}
+    run = CaseRun(case_id, system, raw=[good, only_letter], pool={"pol-c1": policy, "letter-x-p1-c0": letter})
+    run.shipped = [good, only_letter]
+    return run
+
+
+def test_reverify_applies_the_current_checker_to_saved_drafts_without_the_model():
+    from insurithm.evals.compare import reverify
+
+    agent = reverify(saved_run("agent"))
+    assert [f["supported"] for f in agent.raw] == [True, False]
+    assert len(agent.shipped) == 1 and agent.shipped[0]["claim"].startswith("A proportionate")   # the agent ships only what checks out
+    assert [f["reason"] for f in agent.raw if not f["supported"]] == ["cites_only_the_letter"]
+
+    baseline = reverify(saved_run("baseline"))
+    assert len(baseline.shipped) == 2 and not baseline.raw[1]["supported"]                        # the baseline has no checker: it ships all
+
+
+def test_a_resumed_run_is_rechecked_not_asked_again(tmp_path):
+    progress = Progress(tmp_path / "p.json", "k")
+    progress.add(saved_run("baseline"))
+    resumed = Progress(tmp_path / "p.json", "k", resume=True)
+
+    class Never:
+        async def complete_json(self, *a):
+            raise AssertionError("a finished case must not call the model")
+
+    import asyncio
+    runs = asyncio.run(run_baseline_system([c for c in CASES if c["id"] == "C01"], Never(), ingest_pdf(DEFAULT_POLICY_PDF), progress=resumed))
+    assert runs[0].raw[1]["reason"] == "cites_only_the_letter"
+
+
+def test_the_checker_is_not_part_of_what_invalidates_saved_results():
+    from insurithm.evals.compare import fingerprinted_files
+
+    names = {f.name for f in fingerprinted_files()}
+    assert "verify.py" not in names and {"prompts.py", "workflow.py", "retrieval.py"} <= names
+
+
+def test_every_row_of_the_report_shows_what_was_shipped_and_what_was_rejected():
+    cases = [{"id": "N", "expected_outcome": "insufficient_evidence", "expected": []}]
+    run = CaseRun("N", "agent", raw=[{"claim": "x", "supported": False, "reason": "cites_only_the_letter", "citations": []}])
+    row = score(cases, [run])["per_case"][0]
+    assert row["claims"] == [] and row["rejected"] == [{"claim": "x", "reason": "cites_only_the_letter"}]
+
+
+def run_recheck(monkeypatch, tmp_path, *extra, model="stub-model"):
+    class NoGemini:
+        @classmethod
+        def from_env(cls):
+            raise AssertionError("re-checking saved results must not set up the model")
+
+    monkeypatch.setattr(compare_module, "GeminiLLM", NoGemini)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    if model:
+        monkeypatch.setenv("GEMINI_MODEL", model)
+    else:
+        monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    monkeypatch.setattr(sys, "argv", ["compare", "--systems", "baseline", "--limit", "3", "--out-dir", str(tmp_path),
+                                      "--recheck-saved", *extra])
+    compare_module.main()
+
+
+def test_recheck_saved_makes_no_model_calls_and_writes_a_separate_report(monkeypatch, tmp_path, capsys):
+    saved = Progress(tmp_path / "progress_stub-model.json", "an-older-key")
+    for c in CASES[:3]:
+        saved.add(saved_run("baseline", case_id=c["id"]))
+    run_recheck(monkeypatch, tmp_path)
+    err = capsys.readouterr().err
+    assert "No model calls are made" in err and "different version of the code" in err
+    report = json.loads((tmp_path / "rechecked_stub-model.json").read_text())
+    rows = report["systems"]["baseline"]["per_case"]
+    assert all(r["rejected"] == [{"claim": "You may appeal within 30 days of this letter.", "reason": "cites_only_the_letter"}] for r in rows)
+    assert (tmp_path / "rechecked_stub-model.md").exists()
+    assert not list(tmp_path.glob("comparison_*"))                      # an earlier report is never overwritten
+
+
+def test_recheck_saved_refuses_when_cases_are_missing_or_the_model_is_not_named(monkeypatch, tmp_path):
+    saved = Progress(tmp_path / "progress_stub-model.json", "k")
+    saved.add(saved_run("baseline", case_id=CASES[0]["id"]))            # only one of the three
+    with pytest.raises(SystemExit, match="Nothing saved for"):
+        run_recheck(monkeypatch, tmp_path)
+    with pytest.raises(SystemExit, match="Set GEMINI_MODEL"):
+        run_recheck(monkeypatch, tmp_path, model=None)

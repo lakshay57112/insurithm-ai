@@ -31,7 +31,7 @@ every step that can be a plain function is one.
 
 `verify.py` is the only way text reaches the appeal. For each finding it checks that the cited chunk is one
 the agent actually retrieved, that the quote appears in that chunk word for word (whitespace may differ),
-and that the claim shares enough vocabulary with its valid quotes to rule out an unrelated citation. The
+that at least one valid citation is to the policy and not only to the rejection letter, and that the claim shares enough vocabulary with its valid quotes to rule out an unrelated citation. The letter is in the evidence pool so facts can be read from it, but a point resting only on the insurer's own letter has no policy behind it, so it is dropped (reason `cites_only_the_letter`). An earlier version let such a point count as support, which could produce an appeal with no policy text behind it; the first real-model runs showed it. The
 quote printed in the appeal is copied from the source, not from the model, and it carries the page and the
 character offsets into that page.
 
