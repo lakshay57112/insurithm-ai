@@ -86,13 +86,26 @@ Design notes and the threat model are in [docs/architecture.md](docs/architectur
 
 ## Status
 
-Everything above is implemented and tested. One thing has not been done: **the agent and the baseline have not been compared with a real model yet**, because that needs a Gemini API key. The harness itself is tested with scripted models, which proves the arithmetic and the plumbing but says nothing about how well any real model does. The comparison table below stays empty until the command in "Run the comparison" has been run.
+Everything above is implemented and tested, and the agent and the baseline have been compared once with a real model. The harness and the Gemini client are also covered by tests that use scripted models and a mock server, so the suite needs no key.
 
-The Gemini client is covered by tests against a mock HTTP server, not against the live API. Run the two-case smoke test below first.
+**Result.** One run on 2026-10-26 with `gemini-3.5-flash-lite`: 15 synthetic cases (10 where an appeal is justified, 5 where the evidence is not enough). Raw output: `evals/reports/comparison_gemini-3.5-flash-lite.json` and `.md`.
 
 | Metric | Agent | Baseline |
 | --- | --- | --- |
-| Not yet run with a real model | | |
+| Expected passages found by search (16 in total) | 0.938 (15) | 0.625 (10) |
+| Citation correctness (quotes that check out / quotes given) | 1.000 | 1.000 |
+| Unsupported claims, as the model proposed them | 0.059 | 0.000 |
+| Unsupported claims, as shipped to the user | 0.000 | 0.000 |
+| Answer correctness, 10 appeal cases | 0.600 (6) | 0.300 (3) |
+| Evidence coverage, 16 expected passages | 0.688 (11) | 0.375 (6) |
+| Correctly said "insufficient evidence", 5 no-appeal cases | 1.000 | 1.000 |
+| Wrongly said "insufficient evidence", 10 appeal cases | 0.000 | 0.200 (2) |
+| Model calls per case | 4.67 | 1.00 |
+| Cases that ended in an error | 0 | 0 |
+
+What it shows: with this model the agent found more of the passages the cases need (15 of 16 against 10) and gave the right answer in 6 of 10 appeal cases against 3. The baseline gave up on 2 appeal cases that did have evidence; the agent never did. Both refused all 5 cases that had no support. The agent costs about 4.7 times as many model calls.
+
+What it does not show: about 6% of the claims the agent proposed were unsupported and the checker removed all of them, but the baseline proposed no unsupported claims in this run, so this run does not show the checker beating the baseline on that point. With 10 appeal cases, one case moves a score by 0.1. It is one run of one small model, model output varies from run to run, and the policy and cases were written by the same person. The agent still missed the right answer in 4 of the 10 appeal cases; why has not been analysed yet. Treat this as a check that the system behaves as designed and as a reason to test further, not as an accuracy figure.
 
 Retrieval alone (BM25 on the 30 answerable policy questions) has been measured: Recall@1 0.667, Recall@3 0.933, Recall@5 1.000, MRR 0.797.
 
