@@ -2,9 +2,10 @@
 
 import json
 import os
-import select
+import queue
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -18,15 +19,27 @@ def env():
 
 
 def read_event(proc, seconds=90):
+    """Wait for the worker's next JSON line. select() cannot watch a pipe on Windows, so a thread does the reading."""
+    lines = getattr(proc, "_lines", None)
+    if lines is None:
+        lines = proc._lines = queue.Queue()
+
+        def pump():
+            for line in proc.stdout:
+                lines.put(line)
+            lines.put(None)  # the worker closed its output
+
+        threading.Thread(target=pump, daemon=True).start()
     deadline = time.time() + seconds
     while time.time() < deadline:
-        ready, _, _ = select.select([proc.stdout], [], [], 1.0)
-        if ready:
-            line = proc.stdout.readline()
-            if line.strip().startswith("{"):
-                return json.loads(line)
-        if proc.poll() is not None:
+        try:
+            line = lines.get(timeout=1.0)
+        except queue.Empty:
+            continue
+        if line is None:
             break
+        if line.strip().startswith("{"):
+            return json.loads(line)
     raise AssertionError("worker produced no event")
 
 
