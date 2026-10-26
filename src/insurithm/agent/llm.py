@@ -70,7 +70,7 @@ class GeminiLLM:
         model: str,
         *,
         base_url: str = DEFAULT_BASE_URL,
-        timeout: float = 60.0,
+        timeout: float = 120.0,
         max_retries: int = 3,
         backoff_seconds: float = 2.0,
         max_output_tokens: int = 8192,
@@ -107,6 +107,9 @@ class GeminiLLM:
             kwargs.setdefault("temperature", None)
         elif raw_temperature:
             kwargs.setdefault("temperature", float(raw_temperature))
+        # Models that think before answering can take longer than the default wait for one reply.
+        if os.environ.get("GEMINI_TIMEOUT_SECONDS", "").strip():
+            kwargs.setdefault("timeout", float(os.environ["GEMINI_TIMEOUT_SECONDS"]))
         if os.environ.get("GEMINI_MAX_OUTPUT_TOKENS", "").strip():
             kwargs.setdefault("max_output_tokens", int(os.environ["GEMINI_MAX_OUTPUT_TOKENS"]))
         return cls(os.environ.get("GEMINI_API_KEY", ""), os.environ.get("GEMINI_MODEL", ""), **kwargs)

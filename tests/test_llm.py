@@ -193,3 +193,13 @@ async def test_scripted_llm_records_calls_and_runs_out():
 async def test_function_llm_routes_by_stage():
     llm = FunctionLLM(lambda stage, system, prompt: {"stage": stage})
     assert await llm.complete_json("draft", "s", "p") == {"stage": "draft"}
+
+
+def test_reply_timeout_is_configurable(monkeypatch):
+    monkeypatch.chdir("/")
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setenv("GEMINI_MODEL", "m")
+    monkeypatch.delenv("GEMINI_TIMEOUT_SECONDS", raising=False)
+    assert GeminiLLM.from_env()._client.timeout.read == 120.0
+    monkeypatch.setenv("GEMINI_TIMEOUT_SECONDS", "240")
+    assert GeminiLLM.from_env()._client.timeout.read == 240.0
