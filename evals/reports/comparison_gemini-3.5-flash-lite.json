@@ -1,0 +1,319 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "run_at": "2026-10-26 18:20 UTC",
+  "n_cases": 15,
+  "max_steps": 4,
+  "systems": {
+    "agent": {
+      "cases": 15,
+      "appeal_cases": 10,
+      "abstain_cases": 5,
+      "errors": 0,
+      "pool_recall": 0.9375,
+      "citation_correctness": 1.0,
+      "citations_proposed": 21,
+      "claims_proposed": 17,
+      "unsupported_claim_rate_proposed": 0.0588,
+      "claims_shipped": 16,
+      "unsupported_claim_rate_shipped": 0.0,
+      "answer_correctness_appeal": 0.6,
+      "evidence_coverage_appeal": 0.6875,
+      "abstention_correct": 1.0,
+      "false_abstention_rate": 0.0,
+      "mean_model_calls": 4.67,
+      "per_case": [
+        {
+          "case": "C01",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 1,
+          "covered": 0,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "C02",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 1,
+          "shipped": 2,
+          "error": null
+        },
+        {
+          "case": "C03",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 1,
+          "shipped": 3,
+          "error": null
+        },
+        {
+          "case": "C04",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 2,
+          "shipped": 2,
+          "error": null
+        },
+        {
+          "case": "C05",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "C06",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "C07",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 1,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "C08",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "C09",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 2,
+          "shipped": 2,
+          "error": null
+        },
+        {
+          "case": "C10",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 2,
+          "error": null
+        },
+        {
+          "case": "A01",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "A02",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "A03",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "A04",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "A05",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        }
+      ]
+    },
+    "baseline": {
+      "cases": 15,
+      "appeal_cases": 10,
+      "abstain_cases": 5,
+      "errors": 0,
+      "pool_recall": 0.625,
+      "citation_correctness": 1.0,
+      "citations_proposed": 14,
+      "claims_proposed": 13,
+      "unsupported_claim_rate_proposed": 0.0,
+      "claims_shipped": 13,
+      "unsupported_claim_rate_shipped": 0.0,
+      "answer_correctness_appeal": 0.3,
+      "evidence_coverage_appeal": 0.375,
+      "abstention_correct": 1.0,
+      "false_abstention_rate": 0.2,
+      "mean_model_calls": 1.0,
+      "per_case": [
+        {
+          "case": "C01",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 0,
+          "shipped": 2,
+          "error": null
+        },
+        {
+          "case": "C02",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 1,
+          "shipped": 2,
+          "error": null
+        },
+        {
+          "case": "C03",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 1,
+          "covered": 0,
+          "shipped": 2,
+          "error": null
+        },
+        {
+          "case": "C04",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 2,
+          "in_pool": 2,
+          "covered": 2,
+          "shipped": 3,
+          "error": null
+        },
+        {
+          "case": "C05",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 1,
+          "in_pool": 0,
+          "covered": 0,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "C06",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "C07",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 0,
+          "covered": 0,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "C08",
+          "kind": "appeal",
+          "correct": true,
+          "expected": 1,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "C09",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 2,
+          "in_pool": 1,
+          "covered": 1,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "C10",
+          "kind": "appeal",
+          "correct": false,
+          "expected": 1,
+          "in_pool": 0,
+          "covered": 0,
+          "shipped": 1,
+          "error": null
+        },
+        {
+          "case": "A01",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "A02",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "A03",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "A04",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        },
+        {
+          "case": "A05",
+          "kind": "abstain",
+          "correct": true,
+          "shipped": 0,
+          "error": null
+        }
+      ]
+    }
+  },
+  "caveat": "The policy and the cases are synthetic and were written by the same person, the set is small, and one model on one run is one sample. Read these as a check that the system behaves as designed, not as a general accuracy figure."
+}
