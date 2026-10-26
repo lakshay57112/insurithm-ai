@@ -92,7 +92,7 @@ Design notes and the threat model are in [docs/architecture.md](docs/architectur
 
 Everything above is implemented and tested, and the agent and the baseline have been compared once with a real model. The harness and the Gemini client are also covered by tests that use scripted models and a mock server, so the suite needs no key.
 
-**Result.** One run on 2026-10-26 with `gemini-3.5-flash-lite`: 15 synthetic cases (10 where an appeal is justified, 5 where the evidence is not enough). Raw output: `evals/reports/comparison_gemini-3.5-flash-lite.json` and `.md`.
+**Result.** One run on 2026-10-26 with `gemini-3.5-flash-lite`: 15 synthetic cases (10 where an appeal is justified, 5 where the evidence is not enough). Raw output: `evals/reports/run1_before-fix_gemini-3.5-flash-lite.json` and `.md`.
 
 | Metric | Agent | Baseline |
 | --- | --- | --- |
