@@ -1,0 +1,611 @@
+{
+  "retriever": "bm25",
+  "questions_scored": 30,
+  "recall@1": 0.6667,
+  "recall@3": 0.9333,
+  "recall@5": 1.0,
+  "mrr": 0.7967,
+  "misses_at_max_k": [],
+  "per_question": [
+    {
+      "id": "G01",
+      "first_hit_rank": 1,
+      "expected_page": 2,
+      "expected_clause": "2.4",
+      "top_retrieved": [
+        {
+          "page": 2,
+          "clause": "2.4"
+        },
+        {
+          "page": 7,
+          "clause": "7.4"
+        },
+        {
+          "page": 6,
+          "clause": "6.2"
+        }
+      ]
+    },
+    {
+      "id": "G02",
+      "first_hit_rank": 2,
+      "expected_page": 3,
+      "expected_clause": "3.2",
+      "top_retrieved": [
+        {
+          "page": 1,
+          "clause": "1.2"
+        },
+        {
+          "page": 3,
+          "clause": "3.2"
+        },
+        {
+          "page": 5,
+          "clause": "5.8"
+        }
+      ]
+    },
+    {
+      "id": "G03",
+      "first_hit_rank": 5,
+      "expected_page": 4,
+      "expected_clause": "4.2",
+      "top_retrieved": [
+        {
+          "page": 4,
+          "clause": "4.1"
+        },
+        {
+          "page": 1,
+          "clause": "1.5"
+        },
+        {
+          "page": 3,
+          "clause": "3.6"
+        }
+      ]
+    },
+    {
+      "id": "G04",
+      "first_hit_rank": 1,
+      "expected_page": 4,
+      "expected_clause": "4.1",
+      "top_retrieved": [
+        {
+          "page": 4,
+          "clause": "4.1"
+        },
+        {
+          "page": 1,
+          "clause": "1.5"
+        },
+        {
+          "page": 4,
+          "clause": "4.2"
+        }
+      ]
+    },
+    {
+      "id": "G05",
+      "first_hit_rank": 1,
+      "expected_page": 4,
+      "expected_clause": "4.3",
+      "top_retrieved": [
+        {
+          "page": 4,
+          "clause": "4.3"
+        },
+        {
+          "page": 7,
+          "clause": "8.3"
+        },
+        {
+          "page": 6,
+          "clause": "6.8"
+        }
+      ]
+    },
+    {
+      "id": "G06",
+      "first_hit_rank": 1,
+      "expected_page": 5,
+      "expected_clause": "5.1",
+      "top_retrieved": [
+        {
+          "page": 5,
+          "clause": "5.1"
+        },
+        {
+          "page": 2,
+          "clause": "2.6"
+        },
+        {
+          "page": 5,
+          "clause": "5.2"
+        }
+      ]
+    },
+    {
+      "id": "G07",
+      "first_hit_rank": 2,
+      "expected_page": 5,
+      "expected_clause": "5.3",
+      "top_retrieved": [
+        {
+          "page": 8,
+          "clause": null
+        },
+        {
+          "page": 5,
+          "clause": "5.3"
+        },
+        {
+          "page": 6,
+          "clause": "6.2"
+        }
+      ]
+    },
+    {
+      "id": "G08",
+      "first_hit_rank": 1,
+      "expected_page": 6,
+      "expected_clause": "6.2",
+      "top_retrieved": [
+        {
+          "page": 6,
+          "clause": "6.2"
+        },
+        {
+          "page": 6,
+          "clause": "6.1"
+        },
+        {
+          "page": 3,
+          "clause": "3.6"
+        }
+      ]
+    },
+    {
+      "id": "G09",
+      "first_hit_rank": 1,
+      "expected_page": 6,
+      "expected_clause": "6.3",
+      "top_retrieved": [
+        {
+          "page": 6,
+          "clause": "6.3"
+        },
+        {
+          "page": 2,
+          "clause": "2.3"
+        },
+        {
+          "page": 3,
+          "clause": "3.7"
+        }
+      ]
+    },
+    {
+      "id": "G10",
+      "first_hit_rank": 1,
+      "expected_page": 6,
+      "expected_clause": "6.7",
+      "top_retrieved": [
+        {
+          "page": 6,
+          "clause": "6.7"
+        },
+        {
+          "page": 1,
+          "clause": "1.2"
+        },
+        {
+          "page": 4,
+          "clause": "4.7"
+        }
+      ]
+    },
+    {
+      "id": "G11",
+      "first_hit_rank": 5,
+      "expected_page": 6,
+      "expected_clause": "6.6",
+      "top_retrieved": [
+        {
+          "page": 3,
+          "clause": "3.6"
+        },
+        {
+          "page": 6,
+          "clause": "6.1"
+        },
+        {
+          "page": 6,
+          "clause": "6.3"
+        }
+      ]
+    },
+    {
+      "id": "G12",
+      "first_hit_rank": 1,
+      "expected_page": 6,
+      "expected_clause": "6.8",
+      "top_retrieved": [
+        {
+          "page": 6,
+          "clause": "6.8"
+        },
+        {
+          "page": 3,
+          "clause": "3.6"
+        },
+        {
+          "page": 1,
+          "clause": null
+        }
+      ]
+    },
+    {
+      "id": "G13",
+      "first_hit_rank": 1,
+      "expected_page": 3,
+      "expected_clause": "3.6",
+      "top_retrieved": [
+        {
+          "page": 3,
+          "clause": "3.6"
+        },
+        {
+          "page": 3,
+          "clause": "3.1"
+        },
+        {
+          "page": 3,
+          "clause": "3.5"
+        }
+      ]
+    },
+    {
+      "id": "G14",
+      "first_hit_rank": 2,
+      "expected_page": 3,
+      "expected_clause": "3.7",
+      "top_retrieved": [
+        {
+          "page": 3,
+          "clause": "3.6"
+        },
+        {
+          "page": 3,
+          "clause": "3.7"
+        },
+        {
+          "page": 3,
+          "clause": "3.5"
+        }
+      ]
+    },
+    {
+      "id": "G15",
+      "first_hit_rank": 3,
+      "expected_page": 7,
+      "expected_clause": "7.2",
+      "top_retrieved": [
+        {
+          "page": 3,
+          "clause": "3.1"
+        },
+        {
+          "page": 6,
+          "clause": "6.6"
+        },
+        {
+          "page": 7,
+          "clause": "7.2"
+        }
+      ]
+    },
+    {
+      "id": "G16",
+      "first_hit_rank": 1,
+      "expected_page": 4,
+      "expected_clause": "4.4",
+      "top_retrieved": [
+        {
+          "page": 4,
+          "clause": "4.4"
+        },
+        {
+          "page": 4,
+          "clause": "4.5"
+        },
+        {
+          "page": 8,
+          "clause": null
+        }
+      ]
+    },
+    {
+      "id": "G17",
+      "first_hit_rank": 1,
+      "expected_page": 3,
+      "expected_clause": "3.3",
+      "top_retrieved": [
+        {
+          "page": 3,
+          "clause": "3.3"
+        },
+        {
+          "page": 3,
+          "clause": "3.5"
+        },
+        {
+          "page": 3,
+          "clause": "3.7"
+        }
+      ]
+    },
+    {
+      "id": "G18",
+      "first_hit_rank": 2,
+      "expected_page": 3,
+      "expected_clause": "3.5",
+      "top_retrieved": [
+        {
+          "page": 3,
+          "clause": "3.1"
+        },
+        {
+          "page": 3,
+          "clause": "3.5"
+        },
+        {
+          "page": 3,
+          "clause": "3.2"
+        }
+      ]
+    },
+    {
+      "id": "G19",
+      "first_hit_rank": 1,
+      "expected_page": 2,
+      "expected_clause": "2.6",
+      "top_retrieved": [
+        {
+          "page": 2,
+          "clause": "2.6"
+        },
+        {
+          "page": 1,
+          "clause": null
+        },
+        {
+          "page": 2,
+          "clause": "2.7"
+        }
+      ]
+    },
+    {
+      "id": "G20",
+      "first_hit_rank": 3,
+      "expected_page": 2,
+      "expected_clause": "2.2",
+      "top_retrieved": [
+        {
+          "page": 5,
+          "clause": "5.9"
+        },
+        {
+          "page": 6,
+          "clause": "6.1"
+        },
+        {
+          "page": 2,
+          "clause": "2.2"
+        }
+      ]
+    },
+    {
+      "id": "G21",
+      "first_hit_rank": 1,
+      "expected_page": 2,
+      "expected_clause": "2.5",
+      "top_retrieved": [
+        {
+          "page": 2,
+          "clause": "2.5"
+        },
+        {
+          "page": 5,
+          "clause": "5.5"
+        },
+        {
+          "page": 3,
+          "clause": "3.7"
+        }
+      ]
+    },
+    {
+      "id": "G22",
+      "first_hit_rank": 2,
+      "expected_page": 7,
+      "expected_clause": "8.2",
+      "top_retrieved": [
+        {
+          "page": 7,
+          "clause": "8.1"
+        },
+        {
+          "page": 7,
+          "clause": "8.2"
+        },
+        {
+          "page": 3,
+          "clause": "3.6"
+        }
+      ]
+    },
+    {
+      "id": "G23",
+      "first_hit_rank": 1,
+      "expected_page": 7,
+      "expected_clause": "8.1",
+      "top_retrieved": [
+        {
+          "page": 7,
+          "clause": "8.1"
+        },
+        {
+          "page": 7,
+          "clause": "8.2"
+        },
+        {
+          "page": 6,
+          "clause": "6.7"
+        }
+      ]
+    },
+    {
+      "id": "G24",
+      "first_hit_rank": 1,
+      "expected_page": 6,
+      "expected_clause": "6.5",
+      "top_retrieved": [
+        {
+          "page": 6,
+          "clause": "6.5"
+        },
+        {
+          "page": 6,
+          "clause": "6.6"
+        },
+        {
+          "page": 3,
+          "clause": "3.6"
+        }
+      ]
+    },
+    {
+      "id": "G25",
+      "first_hit_rank": 1,
+      "expected_page": 5,
+      "expected_clause": "5.8",
+      "top_retrieved": [
+        {
+          "page": 5,
+          "clause": "5.8"
+        },
+        {
+          "page": 3,
+          "clause": "3.7"
+        },
+        {
+          "page": 2,
+          "clause": "2.4"
+        }
+      ]
+    },
+    {
+      "id": "G26",
+      "first_hit_rank": 1,
+      "expected_page": 5,
+      "expected_clause": "5.9",
+      "top_retrieved": [
+        {
+          "page": 5,
+          "clause": "5.9"
+        },
+        {
+          "page": 6,
+          "clause": "6.8"
+        },
+        {
+          "page": 1,
+          "clause": null
+        }
+      ]
+    },
+    {
+      "id": "G27",
+      "first_hit_rank": 1,
+      "expected_page": 1,
+      "expected_clause": "1.2",
+      "top_retrieved": [
+        {
+          "page": 1,
+          "clause": "1.2"
+        },
+        {
+          "page": 3,
+          "clause": "3.2"
+        },
+        {
+          "page": 7,
+          "clause": "7.1"
+        }
+      ]
+    },
+    {
+      "id": "G28",
+      "first_hit_rank": 3,
+      "expected_page": 4,
+      "expected_clause": "4.1",
+      "top_retrieved": [
+        {
+          "page": 2,
+          "clause": "2.4"
+        },
+        {
+          "page": 1,
+          "clause": "1.5"
+        },
+        {
+          "page": 4,
+          "clause": "4.1"
+        }
+      ]
+    },
+    {
+      "id": "G29",
+      "first_hit_rank": 1,
+      "expected_page": 7,
+      "expected_clause": "7.4",
+      "top_retrieved": [
+        {
+          "page": 7,
+          "clause": "7.4"
+        },
+        {
+          "page": 3,
+          "clause": "3.6"
+        },
+        {
+          "page": 6,
+          "clause": "6.7"
+        }
+      ]
+    },
+    {
+      "id": "G30",
+      "first_hit_rank": 1,
+      "expected_page": 4,
+      "expected_clause": "4.6",
+      "top_retrieved": [
+        {
+          "page": 4,
+          "clause": "4.6"
+        },
+        {
+          "page": 4,
+          "clause": "4.1"
+        },
+        {
+          "page": 4,
+          "clause": "4.7"
+        }
+      ]
+    }
+  ]
+}

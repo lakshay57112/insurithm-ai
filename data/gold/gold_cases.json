@@ -1,0 +1,216 @@
+{
+  "policy": "synthetic_health_policy.pdf",
+  "note": "Synthetic appeal cases for the fictional Northstar policy. 'appeal' cases have letters where the policy wording gives the policyholder something to cite; each lists the passages a good appeal should cite. 'insufficient_evidence' cases are ones where the policy supports the insurer or says nothing, so a trustworthy system should not produce an appeal point. Written by the project author, who also wrote the policy: see docs/evaluation.md for what that means for the numbers.",
+  "cases": [
+    {
+      "id": "C01",
+      "title": "Proportionate deduction although the room was within the limit",
+      "letter": "Northstar Health Assurance\nDate: 14 September 2026\nClaim No: NHA/CL/2026/01101   Policy No: FFP-100231\n\nDear Policyholder,\n\nYour claim of Rs. 1,80,000 for the admission from 02/09/2026 to 06/09/2026 has been settled at Rs. 1,05,000.\nWe applied a proportionate deduction under clause 4.2 to all related expenses, including surgeon fees, because\nyour room was a private room charged at Rs. 4,500 per day. The Sum Insured on your policy is Rs. 5,00,000.\nIf you disagree you may write to us within 30 days of this letter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 4,
+          "clause": "4.1",
+          "passage": "Room rent is limited to a single private room up to 1% of the Sum Insured per day"
+        },
+        {
+          "page": 4,
+          "clause": "4.2",
+          "passage": "all related expenses, including professional fees, are reduced in the same proportion"
+        }
+      ],
+      "why": "1% of Rs. 5,00,000 is Rs. 5,000 a day, so a Rs. 4,500 private room is inside the limit and clause 4.2 should not apply."
+    },
+    {
+      "id": "C02",
+      "title": "Pre-existing disease rejection despite long continuous cover",
+      "letter": "Northstar Health Assurance\nDate: 20 September 2026\nClaim No: NHA/CL/2026/01188   Policy No: FFP-100877\n\nDear Policyholder,\n\nYour claim of Rs. 2,40,000 for knee treatment is rejected under clause 3.2 because the condition is a pre-existing\ndisease. You were first diagnosed with the condition in 2024. Our records show this policy started on 01/04/2025,\nafter your previous policy with another insurer, which you ported to us without a break.\nYou may appeal within 30 days of this letter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 3,
+          "clause": "3.2",
+          "passage": "Expenses for pre-existing diseases are payable only after 36 months of continuous coverage under this policy"
+        },
+        {
+          "page": 3,
+          "clause": "3.6",
+          "passage": "the waiting period already served is credited to the insured person"
+        }
+      ],
+      "why": "The waiting period served under the previous policy must be credited when a policy is ported without a break."
+    },
+    {
+      "id": "C03",
+      "title": "Late intimation after an emergency admission",
+      "letter": "Northstar Health Assurance\nDate: 02 October 2026\nClaim No: NHA/CL/2026/01240   Policy No: FFP-101502\n\nDear Policyholder,\n\nYour claim of Rs. 95,000 for the emergency admission on 25/09/2026 is rejected under clause 6.2. You informed our\nclaims desk 26 hours after admission. The patient was in the intensive care unit and the family could not call earlier.\nYou may appeal within 30 days of this letter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 6,
+          "clause": "6.2",
+          "passage": "the claims desk must be informed within 24 hours of admission"
+        },
+        {
+          "page": 6,
+          "clause": "6.4",
+          "passage": "A delay in giving notice or documents may be condoned if the insured person shows a reasonable cause for the delay"
+        }
+      ],
+      "why": "Clause 6.4 allows a delay to be condoned for reasonable cause, and an ICU admission is a plausible cause."
+    },
+    {
+      "id": "C04",
+      "title": "Claim still unpaid long after the last document",
+      "letter": "Northstar Health Assurance\nDate: 05 October 2026\nClaim No: NHA/CL/2026/01301   Policy No: FFP-102044\n\nDear Policyholder,\n\nThis is to inform you that your claim of Rs. 62,000 is still pending. We received your last necessary document on\n01/07/2026 and the claim has not yet been settled. We are reviewing the file and will revert in due course.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 6,
+          "clause": "6.6",
+          "passage": "We must settle or reject a claim within 30 days of receiving the last necessary document"
+        },
+        {
+          "page": 6,
+          "clause": "6.8",
+          "passage": "we pay interest on the amount at 2% above the bank rate"
+        }
+      ],
+      "why": "More than 30 days have passed since the last necessary document, so the settlement deadline and interest clause apply."
+    },
+    {
+      "id": "C05",
+      "title": "Rejection that names no policy clause",
+      "letter": "Northstar Health Assurance\nDate: 08 October 2026\nClaim No: NHA/CL/2026/01355   Policy No: FFP-102310\n\nDear Policyholder,\n\nYour claim of Rs. 48,000 is not payable as per the terms and conditions of the policy and is therefore rejected.\nNo further correspondence will be entered into on this matter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 6,
+          "clause": "6.7",
+          "passage": "A rejection must be in writing and must name the clause of this policy on which we rely"
+        }
+      ],
+      "why": "The letter rejects the claim without naming any clause, which the policy requires."
+    },
+    {
+      "id": "C06",
+      "title": "Additional documents requested late and without reasons",
+      "letter": "Northstar Health Assurance\nDate: 12 October 2026\nClaim No: NHA/CL/2026/01402   Policy No: FFP-102777\n\nDear Policyholder,\n\nWe received your claim of Rs. 77,500 on 10/09/2026. On 30/09/2026 we asked you for six additional documents. As these\nhave not been supplied, your claim stands closed. You may appeal within 30 days of this letter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 6,
+          "clause": "6.5",
+          "passage": "We may ask for additional documents within 7 days of receiving the claim, and we must give the reason for each request in writing"
+        }
+      ],
+      "why": "The request came 20 days after the claim was received and gave no written reasons."
+    },
+    {
+      "id": "C07",
+      "title": "Day care dialysis rejected because the stay was under 24 hours",
+      "letter": "Northstar Health Assurance\nDate: 15 October 2026\nClaim No: NHA/CL/2026/01466   Policy No: FFP-103005\n\nDear Policyholder,\n\nYour claim of Rs. 12,400 for haemodialysis on 09/10/2026 is rejected under clause 1.1 because the hospital stay was\nonly 6 hours and hospitalisation requires a stay of at least 24 hours. You may appeal within 30 days of this letter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 2,
+          "clause": "2.4",
+          "passage": "Day care procedures listed in Annexure A are covered irrespective of the duration of the stay in hospital"
+        },
+        {
+          "page": 8,
+          "clause": null,
+          "passage": "Haemodialysis, chemotherapy, radiotherapy, cataract surgery"
+        }
+      ],
+      "why": "Haemodialysis is a listed day care procedure, covered regardless of the length of stay."
+    },
+    {
+      "id": "C08",
+      "title": "Co-payment applied to a policyholder under 60",
+      "letter": "Northstar Health Assurance\nDate: 16 October 2026\nClaim No: NHA/CL/2026/01490   Policy No: FFP-103312\n\nDear Policyholder,\n\nYour claim of Rs. 1,50,000 has been settled at Rs. 1,35,000 after a co-payment of 10% under clause 4.3. Our records\nshow you entered the policy at the age of 52. If you disagree you may write to us within 30 days of this letter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 4,
+          "clause": "4.3",
+          "passage": "A co-payment of 10% applies to every claim for an insured person who was aged 60 years or more at entry"
+        }
+      ],
+      "why": "The co-payment applies only to people aged 60 or more at entry; the insured entered at 52."
+    },
+    {
+      "id": "C09",
+      "title": "Accident claim rejected under the initial waiting period",
+      "letter": "Northstar Health Assurance\nDate: 18 October 2026\nClaim No: NHA/CL/2026/01512   Policy No: FFP-103640\n\nDear Policyholder,\n\nYour claim of Rs. 83,000 for fracture treatment after a road accident on 12/10/2026 is rejected under clause 3.1\nbecause it arose within 30 days of your policy start date of 01/10/2026. You may appeal within 30 days of this letter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 3,
+          "clause": "3.1",
+          "passage": "except a claim arising from an accident"
+        },
+        {
+          "page": 3,
+          "clause": "3.5",
+          "passage": "Waiting periods do not apply to hospitalisation caused by an accidental injury"
+        }
+      ],
+      "why": "The initial waiting period does not apply to claims arising from an accident."
+    },
+    {
+      "id": "C10",
+      "title": "Non-disclosure raised after more than five years of cover",
+      "letter": "Northstar Health Assurance\nDate: 19 October 2026\nClaim No: NHA/CL/2026/01530   Policy No: FFP-104001\n\nDear Policyholder,\n\nYour claim of Rs. 3,10,000 is rejected under clause 7.1 because you did not disclose a thyroid condition in the proposal\nform. Your policy has been in force continuously since 01/03/2020. You may appeal within 30 days of this letter.",
+      "expected_outcome": "appeal",
+      "expected": [
+        {
+          "page": 7,
+          "clause": "7.2",
+          "passage": "After 60 continuous months of coverage, no claim can be contested on grounds of non-disclosure or misrepresentation, except for proven fraud"
+        }
+      ],
+      "why": "After 60 continuous months the moratorium bars non-disclosure as a ground for contesting a claim."
+    },
+    {
+      "id": "A01",
+      "title": "Ambulance claim paid at the policy limit",
+      "letter": "Northstar Health Assurance\nDate: 03 September 2026\nClaim No: NHA/CL/2026/00955   Policy No: FFP-104388\n\nDear Policyholder,\n\nYour claim included Rs. 3,500 for road ambulance charges. We have paid Rs. 2,000 for ambulance charges in line with\nclause 2.6 and the rest of your claim has been settled in full. You may write to us within 30 days of this letter.",
+      "expected_outcome": "insufficient_evidence",
+      "expected": [],
+      "why": "The payment matches the Rs. 2,000 ambulance limit, so the policy supports the insurer."
+    },
+    {
+      "id": "A02",
+      "title": "Treatment taken abroad",
+      "letter": "Northstar Health Assurance\nDate: 04 September 2026\nClaim No: NHA/CL/2026/00971   Policy No: FFP-104702\n\nDear Policyholder,\n\nYour claim of Rs. 6,40,000 for surgery performed at a hospital in Singapore is rejected under clause 5.5 because the\ntreatment was taken outside India. You may appeal within 30 days of this letter.",
+      "expected_outcome": "insufficient_evidence",
+      "expected": [],
+      "why": "Clause 5.5 excludes treatment outside India and the letter applies it correctly."
+    },
+    {
+      "id": "A03",
+      "title": "Cosmetic surgery without an accident",
+      "letter": "Northstar Health Assurance\nDate: 06 September 2026\nClaim No: NHA/CL/2026/00990   Policy No: FFP-105019\n\nDear Policyholder,\n\nYour claim of Rs. 1,10,000 for rhinoplasty is rejected under clause 5.1 because the surgery was cosmetic. Your\ndischarge summary confirms the surgery was elective and there was no accident or cancer. You may appeal within 30 days of this letter.",
+      "expected_outcome": "insufficient_evidence",
+      "expected": [],
+      "why": "Clause 5.1 excludes elective cosmetic surgery and none of its exceptions applies."
+    },
+    {
+      "id": "A04",
+      "title": "Complaint about the renewal premium",
+      "letter": "Northstar Health Assurance\nDate: 09 September 2026\nPolicy No: FFP-105330\n\nDear Policyholder,\n\nWe have received your request to reduce your renewal premium. Your renewal premium has been set at Rs. 31,200 for the\ncoming year and we are unable to change it. You may write to our customer care team if you wish to discuss this.",
+      "expected_outcome": "insufficient_evidence",
+      "expected": [],
+      "why": "The policy wording given says nothing about how the premium is calculated, so no policy clause can support an appeal."
+    },
+    {
+      "id": "A05",
+      "title": "Request for a free annual health check-up",
+      "letter": "Northstar Health Assurance\nDate: 11 September 2026\nPolicy No: FFP-105671\n\nDear Policyholder,\n\nYour request for a free annual health check-up has been declined because your policy does not include a health\ncheck-up benefit. You may write to us within 30 days of this letter.",
+      "expected_outcome": "insufficient_evidence",
+      "expected": [],
+      "why": "The policy wording lists no health check-up benefit, so the refusal is consistent with it."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+chroma_data/
+*.sqlite
+*.db
+
+insurithm_data/
+chunks.jsonl
+insurithm_tracker.sqlite*
