@@ -261,6 +261,16 @@ async def compare(
     }
 
 
+def error_lines(report: dict[str, Any]) -> list[str]:
+    """One line per distinct failure, so a run where every case errored explains itself."""
+    seen: dict[tuple[str, str], list[str]] = {}
+    for system, data in report["systems"].items():
+        for row in data["per_case"]:
+            if row.get("error"):
+                seen.setdefault((system, row["error"]), []).append(row["case"])
+    return [f"{system}: {message} (cases: {', '.join(cases)})" for (system, message), cases in seen.items()]
+
+
 def main() -> None:
     ensure_utf8_output()
     parser = argparse.ArgumentParser(description="Compare the agent with the non-agentic baseline using a real Gemini model.")
@@ -289,6 +299,12 @@ def main() -> None:
     (out_dir / f"{stem}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     (out_dir / f"{stem}.md").write_text(render_markdown(report), encoding="utf-8")
     print(render_markdown(report))
+    problems = error_lines(report)
+    if problems:
+        print("What went wrong:")
+        for line in problems:
+            print("  " + line)
+        print()
     print(f"written to {out_dir / stem}.json and .md")
 
 

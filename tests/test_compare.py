@@ -120,3 +120,16 @@ async def test_full_report_and_markdown():
     assert report["model"] == "scripted-oracle" and report["n_cases"] == 4
     md = render_markdown(report)
     assert "| Metric | baseline |" in md and "Citation correctness" in md and "synthetic" in md
+
+
+def test_error_lines_explain_why_cases_failed():
+    from insurithm.evals.compare import error_lines
+
+    report = {"systems": {
+        "agent": {"per_case": [{"case": "A1", "error": "Gemini API error 404: model not found"},
+                               {"case": "A2", "error": "Gemini API error 404: model not found"},
+                               {"case": "A3", "error": None}]},
+        "baseline": {"per_case": [{"case": "A1", "error": None}]},
+    }}
+    assert error_lines(report) == ["agent: Gemini API error 404: model not found (cases: A1, A2)"]
+    assert error_lines({"systems": {"agent": {"per_case": [{"case": "A1"}]}}}) == []
