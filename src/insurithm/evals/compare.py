@@ -25,7 +25,9 @@ import argparse
 import asyncio
 import json
 import re
+import sys
 import tempfile
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -261,6 +263,26 @@ async def compare(
     }
 
 
+class ProgressLLM:
+    """Wraps another LLM and prints one line per call, so a slow run shows that it is working."""
+
+    def __init__(self, inner: LLM):
+        self._inner = inner
+        self._n = 0
+
+    async def complete_json(self, stage: str, system: str, prompt: str) -> dict[str, Any]:
+        self._n += 1
+        n, started = self._n, time.monotonic()
+        print(f"  call {n} ({stage}): waiting for the model...", file=sys.stderr, flush=True)
+        try:
+            result = await self._inner.complete_json(stage, system, prompt)
+        except Exception as err:
+            print(f"  call {n} failed after {time.monotonic() - started:.0f}s: {err}", file=sys.stderr, flush=True)
+            raise
+        print(f"  call {n} done in {time.monotonic() - started:.0f}s", file=sys.stderr, flush=True)
+        return result
+
+
 def error_lines(report: dict[str, Any]) -> list[str]:
     """One line per distinct failure, so a run where every case errored explains itself."""
     seen: dict[tuple[str, str], list[str]] = {}
@@ -283,8 +305,9 @@ def main() -> None:
     args = parser.parse_args()
 
     base = GeminiLLM.from_env()
-    llm = ThrottledLLM(base, args.min_interval)
+    llm = ProgressLLM(ThrottledLLM(base, args.min_interval))
     cases = load_cases(args.cases)[: args.limit]
+    print(f"Running {len(cases)} case(s) with {base.model}. Each model call is listed below.", file=sys.stderr, flush=True)
 
     async def go() -> dict[str, Any]:
         try:

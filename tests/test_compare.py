@@ -133,3 +133,26 @@ def test_error_lines_explain_why_cases_failed():
     }}
     assert error_lines(report) == ["agent: Gemini API error 404: model not found (cases: A1, A2)"]
     assert error_lines({"systems": {"agent": {"per_case": [{"case": "A1"}]}}}) == []
+
+
+async def test_progress_lines_show_each_call_and_failures(capsys):
+    from insurithm.agent.llm import LLMError
+    from insurithm.evals.compare import ProgressLLM
+
+    class Inner:
+        async def complete_json(self, stage, system, prompt):
+            if stage == "bad":
+                raise LLMError("boom")
+            return {"ok": True}
+
+    llm = ProgressLLM(Inner())
+    assert await llm.complete_json("draft", "s", "p") == {"ok": True}
+    try:
+        await llm.complete_json("bad", "s", "p")
+    except LLMError:
+        pass
+    else:
+        raise AssertionError("the error must still reach the caller")
+    err = capsys.readouterr().err
+    assert "call 1 (draft)" in err and "call 1 done" in err
+    assert "call 2 failed" in err and "boom" in err
