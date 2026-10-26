@@ -146,7 +146,7 @@ def _covered(run: CaseRun, expected: dict[str, Any]) -> bool:
 
 
 def _name(expected: dict[str, Any]) -> str:
-    return f"{expected.get('clause') or 'letter'} (page {expected['page']})"
+    return f"{expected.get('clause') or 'an unnumbered passage'} (page {expected['page']})"
 
 
 def _cites(run: CaseRun, finding: dict[str, Any]) -> list[str]:

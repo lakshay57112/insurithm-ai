@@ -92,28 +92,28 @@ Design notes and the threat model are in [docs/architecture.md](docs/architectur
 
 Everything above is implemented and tested, and the agent and the baseline have been compared once with a real model. The harness and the Gemini client are also covered by tests that use scripted models and a mock server, so the suite needs no key.
 
-**Result.** One run on 2026-10-26 with `gemini-3.5-flash-lite`: 15 synthetic cases (10 where an appeal is justified, 5 where the evidence is not enough). Raw output: `evals/reports/run1_before-fix_gemini-3.5-flash-lite.json` and `.md`.
+**Results.** Two runs on 2026-10-26 with `gemini-3.5-flash-lite` on 15 synthetic cases (10 where an appeal is justified, 5 where the evidence is not enough). Run 1 is before a fix to the drafting step (see below); run 2 is after it. The baseline gave exactly the same numbers both times. Raw output: `evals/reports/run1_before-fix_gemini-3.5-flash-lite.json` and `.md` for run 1, `evals/reports/comparison_gemini-3.5-flash-lite.json` and `.md` for run 2.
 
-| Metric | Agent | Baseline |
-| --- | --- | --- |
-| Expected passages found by search (16 in total) | 0.938 (15) | 0.625 (10) |
-| Citation correctness (quotes that check out / quotes given) | 1.000 | 1.000 |
-| Unsupported claims, as the model proposed them | 0.059 | 0.000 |
-| Unsupported claims, as shipped to the user | 0.000 | 0.000 |
-| Answer correctness, 10 appeal cases | 0.600 (6) | 0.300 (3) |
-| Evidence coverage, 16 expected passages | 0.688 (11) | 0.375 (6) |
-| Correctly said "insufficient evidence", 5 no-appeal cases | 1.000 | 1.000 |
-| Wrongly said "insufficient evidence", 10 appeal cases | 0.000 | 0.200 (2) |
-| Model calls per case | 4.67 | 1.00 |
-| Cases that ended in an error | 0 | 0 |
+| Metric | Agent, run 1 | Agent, run 2 | Baseline (both runs) |
+| --- | --- | --- | --- |
+| Expected passages found by search (16 in total) | 0.938 (15) | 0.938 (15) | 0.625 (10) |
+| Citation correctness (quotes that check out / quotes given) | 1.000 | 1.000 | 1.000 |
+| Unsupported claims, as the model proposed them | 0.059 | 0.067 | 0.000 |
+| Unsupported claims, as shipped to the user | 0.000 | 0.000 | 0.000 |
+| Answer correctness, 10 appeal cases | 0.600 (6) | 0.400 (4) | 0.300 (3) |
+| Evidence coverage, 16 expected passages | 0.688 (11) | 0.562 (9) | 0.375 (6) |
+| Correctly said "insufficient evidence", 5 no-appeal cases | 1.000 | 0.800 | 1.000 |
+| Wrongly said "insufficient evidence", 10 appeal cases | 0.000 | 0.300 (3) | 0.200 (2) |
+| Model calls per case | 4.67 | 4.53 | 1.00 |
+| Cases that ended in an error | 0 | 0 | 0 |
 
-What it shows: with this model the agent found more of the passages the cases need (15 of 16 against 10) and gave the right answer in 6 of 10 appeal cases against 3. The baseline gave up on 2 appeal cases that did have evidence; the agent never did. Both refused all 5 cases that had no support. The agent costs about 4.7 times as many model calls.
+**What holds up.** The agent finds more of the passages the cases need than the baseline does: 15 of 16 against 10, the same in both runs. That is the part of the design (choosing its own searches and fetching the clauses the letter cites) that clearly works. Every quote the agent shipped checked out, and the checker removed all of the unsupported claims it proposed (about 6 to 7% of them) before they reached the reader.
 
-What it does not show: about 6% of the claims the agent proposed were unsupported and the checker removed all of them, but the baseline proposed no unsupported claims in this run, so this run does not show the checker beating the baseline on that point. With 10 appeal cases, one case moves a score by 0.1. It is one run of one small model, model output varies from run to run, and the policy and cases were written by the same person. The agent still missed the right answer in 4 of the 10 appeal cases; why has not been analysed yet. Treat this as a check that the system behaves as designed and as a reason to test further, not as an accuracy figure.
+**What does not hold up.** Whether the agent *answers* better is not settled. Run 1 had it ahead (6 cases right against 3); run 2 had it at 4 against 3, gave up on 3 appeal cases that did have evidence, and wrongly wrote an appeal for one of the 5 cases that had none. The baseline, with one model call, repeated itself exactly; the agent, with about five calls per case, did not. With 10 appeal cases, one case moves a score by 0.1, so the difference between the agent and the baseline on answers is inside the run-to-run variation. Do not quote either agent column on its own as the agent's accuracy.
 
-**What the first run exposed.** The agent retrieved 15 of the 16 passages the cases need but cited only 11. Looking for the reason turned up a real bug: the drafting step showed the model only the first 24 pieces of evidence, sorted by page number, so on a large pool the pages at the back of the policy (appeals and deadlines) were silently dropped. That is fixed (the draft now sees everything it gathered, and the activity log says so if anything must be left out), with a test that fails on the old behaviour.
+**The bug the first run led to.** The agent retrieved 15 of 16 passages but cited only 11. Looking for the reason turned up a real bug: the drafting step showed the model only the first 24 pieces of evidence, sorted by page, so on a large pool the pages at the back of the policy (appeals and deadlines) were silently dropped. That is fixed (the draft sees everything it gathered, and the activity log says so if anything must be left out), with a test that fails on the old behaviour. But the fix did not visibly help: it only matters when the agent gathers more than 24 pieces, and most misses were on early pages (C01, C02 expect pages 3 and 4), so it was not the main cause.
 
-That bug does **not** explain most of the misses. Two of the four missed cases (C01, C02) expect passages on pages 3 and 4, which the cut never touched, and four of the six cases the agent got right needed passages on pages 6 to 8. The baseline, which never reaches the cut, also retrieved passages it then did not cite. So much of the gap is the model citing different passages than the cases expect, and possibly the scoring, which only counts a quote taken from the exact chunk that holds the expected passage. That has not been checked yet. The table above is from **before** the fix; a second run is needed to see what the fix changed, and the reason for each remaining miss is now listed under the table.
+**What is still open.** In both systems the model is often given the right passage and does not cite it ("retrieved but not cited"; the report lists these case by case). Why has not been established. A larger model, more runs per case, or checking whether the cases are too strict about which chunk must be cited would each be worth trying. All numbers come from one small model on synthetic cases written by the same person, so they show that the system behaves as designed, not how accurate it is.
 
 Retrieval alone (BM25 on the 30 answerable policy questions) has been measured: Recall@1 0.667, Recall@3 0.933, Recall@5 1.000, MRR 0.797.
 
