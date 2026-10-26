@@ -22,10 +22,15 @@ import httpx
 
 DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+MAX_QUOTA_WAIT = 90.0  # seconds; if Google asks for a longer pause than this, stop instead of waiting
 
 
 class LLMError(RuntimeError):
     """The model could not be reached or refused the request."""
+
+
+class LLMQuotaError(LLMError):
+    """Gemini refused because the usage limit is used up (HTTP 429). Retrying soon will not help."""
 
 
 class LLMConfigError(LLMError):
@@ -132,26 +137,58 @@ class GeminiLLM:
         headers = {"x-goog-api-key": self._api_key, "content-type": "application/json"}
         body = self._body(system, prompt)
         last_problem = "no attempt made"
+        last_status: int | None = None
 
         for attempt in range(self._max_retries + 1):
             try:
                 response = await self._client.post(self._url, headers=headers, json=body)
             except httpx.TransportError as exc:
+                last_status = None
                 last_problem = f"network error: {type(exc).__name__}"
             else:
                 if response.status_code == 200:
                     return self._extract(response.json())
                 if response.status_code not in RETRY_STATUSES:
                     raise LLMError(f"Gemini API error {response.status_code}: {self._api_message(response)}")
-                last_problem = f"HTTP {response.status_code}"
+                last_status = response.status_code
+                detail = self._api_message(response)
+                last_problem = f"HTTP {last_status}" + (f": {detail}" if detail.strip("{} \n") else "")
                 retry_after = response.headers.get("retry-after")
                 if retry_after and retry_after.isdigit():
                     await self._sleep(min(float(retry_after), 30.0))
                     continue
+                if last_status == 429:
+                    pause = self._retry_delay(response)
+                    if pause is not None:
+                        if pause > MAX_QUOTA_WAIT:
+                            raise LLMQuotaError(f"Gemini's usage limit is used up; it asks to wait {self._human(pause)} ({detail})")
+                        await self._sleep(pause + 1)
+                        continue
             if attempt < self._max_retries:
                 await self._sleep(self._backoff * (2**attempt))
 
-        raise LLMError(f"Gemini request failed after {self._max_retries + 1} attempts ({last_problem})")
+        message = f"Gemini request failed after {self._max_retries + 1} attempts ({last_problem})"
+        raise (LLMQuotaError if last_status == 429 else LLMError)(message)
+
+    @staticmethod
+    def _retry_delay(response: httpx.Response) -> float | None:
+        """Seconds Google asks us to wait, from the RetryInfo detail of an error reply (for example "32s")."""
+        try:
+            details = response.json()["error"]["details"]
+            for item in details:
+                if str(item.get("@type", "")).endswith("RetryInfo"):
+                    return float(str(item["retryDelay"]).rstrip("s"))
+        except (ValueError, KeyError, TypeError, AttributeError):
+            pass
+        return None
+
+    @staticmethod
+    def _human(seconds: float) -> str:
+        if seconds < 120:
+            return f"about {round(seconds)} seconds"
+        if seconds < 7200:
+            return f"about {round(seconds / 60)} minutes"
+        return f"about {round(seconds / 3600)} hours"
 
     @staticmethod
     def _api_message(response: httpx.Response) -> str:

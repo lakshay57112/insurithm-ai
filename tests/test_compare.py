@@ -1,16 +1,19 @@
 """Tests for the evaluation harness itself, using scripted models. They check the maths and the plumbing,
 not how good any real model is."""
 
+import json
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
 from fakes import HallucinatingLLM, OracleLLM
 
-from insurithm.agent.llm import LLMError, ScriptedLLM
+from insurithm.agent.llm import LLMError, LLMQuotaError, ScriptedLLM
 from insurithm.config import DEFAULT_POLICY_PDF
+from insurithm.evals import compare as compare_module
 from insurithm.evals.compare import (
-    CaseRun, compare, load_cases, render_markdown, run_agent_system, run_baseline_system, score,
+    CaseRun, Progress, QuotaStopped, compare, load_cases, render_markdown, run_agent_system, run_baseline_system, score,
 )
 from insurithm.ingest import ingest_pdf
 
@@ -156,3 +159,90 @@ async def test_progress_lines_show_each_call_and_failures(capsys):
     err = capsys.readouterr().err
     assert "call 1 (draft)" in err and "call 1 done" in err
     assert "call 2 failed" in err and "boom" in err
+
+
+# ----------------------------------------------------------------------------- stopping on quota and resuming
+QUOTA_MESSAGE = "Gemini's usage limit is used up; it asks to wait about 12 hours (Quota exceeded)"
+
+
+class QuotaAfter:
+    """Answers like the oracle for `limit` calls, then reports that the usage limit is used up."""
+
+    def __init__(self, limit=None):
+        self.limit, self.calls, self.inner = limit, 0, OracleLLM(CASES)
+
+    async def complete_json(self, stage, system, prompt):
+        if self.limit is not None and self.calls >= self.limit:
+            raise LLMQuotaError(QUOTA_MESSAGE)
+        self.calls += 1
+        return await self.inner.complete_json(stage, system, prompt)
+
+
+async def test_a_quota_error_stops_the_run_and_keeps_finished_cases(tmp_path):
+    progress = Progress(tmp_path / "p.json", "key")
+    chunks = ingest_pdf(DEFAULT_POLICY_PDF)
+    with pytest.raises(QuotaStopped, match="12 hours"):
+        await run_baseline_system(CASES[:4], QuotaAfter(limit=2), chunks, progress=progress)
+    assert set(progress.done("baseline")) == {CASES[0]["id"], CASES[1]["id"]}
+
+    resumed = Progress(tmp_path / "p.json", "key", resume=True)       # a new process reads the file
+    llm = QuotaAfter()
+    runs = await run_baseline_system(CASES[:4], llm, chunks, progress=resumed)
+    assert llm.calls == 2                                              # only the two unfinished cases were asked
+    assert [r.case_id for r in runs] == [c["id"] for c in CASES[:4]] and not any(r.error for r in runs)
+
+
+def test_saved_progress_is_ignored_when_the_settings_differ_or_resume_is_off(tmp_path):
+    path = tmp_path / "p.json"
+    Progress(path, "key-a").add(CaseRun("C01", "baseline", model_calls=1))
+    assert Progress(path, "key-a", resume=True).done("baseline")["C01"].model_calls == 1
+    assert Progress(path, "key-b", resume=True).done("baseline") == {}   # other model or cases
+    assert Progress(path, "key-a", resume=False).done("baseline") == {}  # not asked to resume
+    path.write_text("not json")
+    assert Progress(path, "key-a", resume=True).done("baseline") == {}   # a damaged file never crashes the run
+
+
+def test_errors_are_not_saved_as_finished_and_the_report_says_the_run_is_incomplete():
+    cases = [{"id": "A", "expected_outcome": "appeal", "expected": [{"page": 1, "clause": None, "passage": "p"}]}]
+    report = {
+        "model": "m", "run_at": "now", "n_cases": 1, "caveat": "caveat",
+        "systems": {"baseline": score(cases, [CaseRun("A", "baseline", error="HTTP 503")])},
+    }
+    assert "Incomplete run" in render_markdown(report) and "--resume" in render_markdown(report)
+    report["systems"]["baseline"] = score(cases, [CaseRun("A", "baseline")])
+    assert "Incomplete run" not in render_markdown(report)
+
+
+def run_cli(monkeypatch, tmp_path, llm, *extra):
+    class Stub:
+        model = "stub-model"
+
+        @classmethod
+        def from_env(cls):
+            return cls()
+
+        async def complete_json(self, stage, system, prompt):
+            return await llm.complete_json(stage, system, prompt)
+
+        async def aclose(self):
+            pass
+
+    monkeypatch.setattr(compare_module, "GeminiLLM", Stub)
+    monkeypatch.setattr(sys, "argv", ["compare", "--systems", "baseline", "--limit", "3", "--min-interval", "0",
+                                      "--out-dir", str(tmp_path), *extra])
+    compare_module.main()
+
+
+def test_command_line_stops_cleanly_on_quota_then_resumes(monkeypatch, tmp_path, capsys):
+    with pytest.raises(SystemExit) as stop:
+        run_cli(monkeypatch, tmp_path, QuotaAfter(limit=2))
+    assert stop.value.code == 2
+    err = capsys.readouterr().err
+    assert "Stopped early" in err and "12 hours" in err and "--resume" in err and "baseline: 2 case(s)" in err
+    assert not list(tmp_path.glob("comparison_*"))                     # no misleading half-finished report
+
+    llm = QuotaAfter()
+    run_cli(monkeypatch, tmp_path, llm, "--resume")
+    assert llm.calls == 1                                              # only the one case that was left
+    report = json.loads((tmp_path / "comparison_stub-model.json").read_text())
+    assert report["n_cases"] == 3 and report["systems"]["baseline"]["errors"] == 0

@@ -23,18 +23,20 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
+import os
 import re
 import sys
 import tempfile
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from ..agent.baseline import run_baseline
-from ..agent.llm import LLM, CountingLLM, GeminiLLM, LLMError, ThrottledLLM
+from ..agent.llm import LLM, CountingLLM, GeminiLLM, LLMError, LLMQuotaError, ThrottledLLM
 from ..agent.tools import Tools, ToolError
 from ..agent.workflow import open_runner
 from ..console import ensure_utf8_output
@@ -65,6 +67,47 @@ class CaseRun:
     pool: dict[str, dict[str, Any]] = field(default_factory=dict)
     model_calls: int = 0
     error: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CaseRun":
+        return cls(**data)
+
+
+class QuotaStopped(RuntimeError):
+    """The model's usage limit ran out part-way through. Whatever finished before that is saved."""
+
+
+class Progress:
+    """Finished cases, saved after each one, so a run that stopped can carry on where it left off."""
+
+    def __init__(self, path: Path | None, key: str, resume: bool = False):
+        self.path, self.key = path, key
+        self.runs: dict[str, dict[str, CaseRun]] = {}
+        if path and resume and path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                data = {}
+            if isinstance(data, dict) and data.get("key") == key:  # same model, settings and cases
+                self.runs = {
+                    system: {cid: CaseRun.from_dict(r) for cid, r in cases.items()}
+                    for system, cases in data.get("runs", {}).items()
+                }
+
+    def done(self, system: str) -> dict[str, CaseRun]:
+        return self.runs.get(system, {})
+
+    def add(self, run: CaseRun) -> None:
+        self.runs.setdefault(run.system, {})[run.case_id] = run
+        if self.path:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.path.with_name(self.path.name + ".tmp")
+            payload = {"key": self.key, "runs": {sy: {c: asdict(r) for c, r in cs.items()} for sy, cs in self.runs.items()}}
+            tmp.write_text(json.dumps(payload), encoding="utf-8")
+            os.replace(tmp, self.path)
+
+    def counts(self) -> str:
+        return ", ".join(f"{system}: {len(cases)} case(s)" for system, cases in self.runs.items()) or "nothing yet"
 
 
 # ----------------------------------------------------------------------------- scoring
@@ -153,11 +196,16 @@ def _checked(findings: Any, pool: dict[str, dict[str, Any]], min_overlap: float)
 
 
 async def run_baseline_system(
-    cases: list[dict[str, Any]], llm: LLM, chunks: list[Chunk], *, k: int = 5, min_overlap: float = DEFAULT_MIN_OVERLAP
+    cases: list[dict[str, Any]], llm: LLM, chunks: list[Chunk], *, k: int = 5, min_overlap: float = DEFAULT_MIN_OVERLAP,
+    progress: Progress | None = None,
 ) -> list[CaseRun]:
     retriever = BM25Retriever(chunks)
+    done = progress.done("baseline") if progress else {}
     runs = []
     for c in cases:
+        if c["id"] in done:
+            runs.append(done[c["id"]])
+            continue
         counting = CountingLLM(llm)
         run = CaseRun(c["id"], "baseline")
         try:
@@ -165,20 +213,29 @@ async def run_baseline_system(
             run.pool = out["evidence"]
             run.raw = _checked(out["findings"], run.pool, min_overlap)
             run.shipped = run.raw  # no verifier: the user gets everything
+        except LLMQuotaError as err:
+            raise QuotaStopped(str(err)) from None
         except LLMError as err:
             run.error = str(err)
         run.model_calls = counting.count
+        if progress and not run.error:
+            progress.add(run)
         runs.append(run)
     return runs
 
 
 async def run_agent_system(
-    cases: list[dict[str, Any]], llm: LLM, work_dir: Path, *, max_steps: int = 4, min_overlap: float = DEFAULT_MIN_OVERLAP
+    cases: list[dict[str, Any]], llm: LLM, work_dir: Path, *, max_steps: int = 4, min_overlap: float = DEFAULT_MIN_OVERLAP,
+    progress: Progress | None = None,
 ) -> list[CaseRun]:
     work_dir.mkdir(parents=True, exist_ok=True)
+    done = progress.done("agent") if progress else {}
     runs = []
     async with Tools.local(work_dir / "tracker.sqlite") as tools:
         for c in cases:
+            if c["id"] in done:
+                runs.append(done[c["id"]])
+                continue
             counting = CountingLLM(llm)
             case_id = f"eval-{c['id'].lower()}"
             run = CaseRun(c["id"], "agent")
@@ -191,9 +248,13 @@ async def run_agent_system(
                     run.pool = values["evidence"]
                     run.raw = verification["supported"] + verification["unsupported"]
                     run.shipped = verification["supported"]
+                except LLMQuotaError as err:
+                    raise QuotaStopped(str(err)) from None
                 except (LLMError, ToolError) as err:
                     run.error = str(err)
             run.model_calls = counting.count
+            if progress and not run.error:
+                progress.add(run)
             runs.append(run)
     return runs
 
@@ -230,6 +291,9 @@ def render_markdown(report: dict[str, Any]) -> str:
             v = report["systems"][s][key]
             cells.append("n/a" if v is None else (f"{v:.3f}" if isinstance(v, float) else str(v)))
         lines.append(f"| {title} | " + " | ".join(cells) + " |")
+    if any(report["systems"][s]["errors"] for s in systems):
+        lines += ["", "> **Incomplete run.** Cases that errored are counted as failures here, so these numbers understate the "
+                      "system. Rerun with `--resume` to retry only those cases before quoting any of this."]
     lines += ["", report["caveat"], ""]
     return "\n".join(lines)
 
@@ -242,16 +306,16 @@ CAVEAT = (
 
 async def compare(
     llm: LLM, model_name: str, systems: tuple[str, ...] = ("agent", "baseline"), cases: list[dict[str, Any]] | None = None,
-    max_steps: int = 4, min_overlap: float = DEFAULT_MIN_OVERLAP,
+    max_steps: int = 4, min_overlap: float = DEFAULT_MIN_OVERLAP, progress: Progress | None = None,
 ) -> dict[str, Any]:
     cases = cases if cases is not None else load_cases()
     chunks = ingest_pdf(DEFAULT_POLICY_PDF)
     out: dict[str, Any] = {}
     with tempfile.TemporaryDirectory() as tmp:
         if "baseline" in systems:
-            out["baseline"] = score(cases, await run_baseline_system(cases, llm, chunks, min_overlap=min_overlap))
+            out["baseline"] = score(cases, await run_baseline_system(cases, llm, chunks, min_overlap=min_overlap, progress=progress))
         if "agent" in systems:
-            out["agent"] = score(cases, await run_agent_system(cases, llm, Path(tmp), max_steps=max_steps, min_overlap=min_overlap))
+            out["agent"] = score(cases, await run_agent_system(cases, llm, Path(tmp), max_steps=max_steps, min_overlap=min_overlap, progress=progress))
     ordered = {s: out[s] for s in systems if s in out}
     return {
         "model": model_name,
@@ -302,23 +366,37 @@ def main() -> None:
     parser.add_argument("--max-steps", type=int, default=4)
     parser.add_argument("--min-interval", type=float, default=5.0, help="seconds between model calls (free-tier rate limits)")
     parser.add_argument("--out-dir", default=str(REPORT_DIR))
+    parser.add_argument("--resume", action="store_true", help="reuse cases finished by an earlier run of this same command and retry the rest")
     args = parser.parse_args()
 
     base = GeminiLLM.from_env()
     llm = ProgressLLM(ThrottledLLM(base, args.min_interval))
     cases = load_cases(args.cases)[: args.limit]
+    out_dir = Path(args.out_dir)
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", base.model)
+    key = hashlib.sha256(json.dumps([base.model, args.max_steps, DEFAULT_MIN_OVERLAP, [(c["id"], c["letter"]) for c in cases]]).encode()).hexdigest()
+    progress = Progress(out_dir / f"progress_{slug}.json", key, args.resume)
     print(f"Running {len(cases)} case(s) with {base.model}. Each model call is listed below.", file=sys.stderr, flush=True)
+    if args.resume:
+        print(f"Resuming. Already finished: {progress.counts()}.", file=sys.stderr, flush=True)
 
     async def go() -> dict[str, Any]:
         try:
-            return await compare(llm, base.model, tuple(args.systems), cases, args.max_steps)
+            return await compare(llm, base.model, tuple(args.systems), cases, args.max_steps, progress=progress)
         finally:
             await base.aclose()
 
-    report = asyncio.run(go())
-    out_dir = Path(args.out_dir)
+    try:
+        report = asyncio.run(go())
+    except QuotaStopped as stop:
+        print(f"\nStopped early: {stop}", file=sys.stderr)
+        print(f"Finished cases are saved ({progress.counts()}).", file=sys.stderr)
+        print("Run the same command again with --resume once the limit resets, or set a different GEMINI_MODEL "
+              "(each model has its own limit) and start again.", file=sys.stderr)
+        sys.exit(2)
+
     out_dir.mkdir(parents=True, exist_ok=True)
-    stem = "comparison_" + re.sub(r"[^A-Za-z0-9._-]+", "-", base.model)
+    stem = "comparison_" + slug
     (out_dir / f"{stem}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     (out_dir / f"{stem}.md").write_text(render_markdown(report), encoding="utf-8")
     print(render_markdown(report))
@@ -327,6 +405,7 @@ def main() -> None:
         print("What went wrong:")
         for line in problems:
             print("  " + line)
+        print("Run the same command again with --resume to retry only the cases that failed.")
         print()
     print(f"written to {out_dir / stem}.json and .md")
 

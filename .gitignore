@@ -13,3 +13,6 @@ chroma_data/
 insurithm_data/
 chunks.jsonl
 insurithm_tracker.sqlite*
+
+# half-finished comparison runs
+evals/reports/progress_*.json*

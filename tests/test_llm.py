@@ -9,6 +9,7 @@ from insurithm.agent.llm import (
     LLMConfigError,
     LLMError,
     LLMOutputError,
+    LLMQuotaError,
     ScriptedLLM,
     parse_json_object,
 )
@@ -203,3 +204,47 @@ def test_reply_timeout_is_configurable(monkeypatch):
     assert GeminiLLM.from_env()._client.timeout.read == 120.0
     monkeypatch.setenv("GEMINI_TIMEOUT_SECONDS", "240")
     assert GeminiLLM.from_env()._client.timeout.read == 240.0
+
+
+def quota_reply(delay):
+    return httpx.Response(429, json={"error": {"message": "Quota exceeded for this model", "details": [
+        {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": delay}]}})
+
+
+async def test_a_short_wait_requested_by_google_is_honoured():
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return quota_reply("32s") if len(calls) == 1 else httpx.Response(200, json=reply({"ok": 1}))
+
+    llm, sleeps = make_llm(handler)
+    assert await llm.complete_json("s", "sys", "p") == {"ok": 1}
+    assert sleeps == [33.0]
+
+
+async def test_a_long_wait_means_the_limit_is_used_up_and_we_stop_at_once():
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return quota_reply("43200s")
+
+    llm, sleeps = make_llm(handler)
+    with pytest.raises(LLMQuotaError, match="12 hours") as err:
+        await llm.complete_json("s", "sys", "p")
+    assert len(calls) == 1 and sleeps == []
+    assert "Quota exceeded" in str(err.value)  # Google's own reason is shown
+
+
+async def test_repeated_429_without_a_hint_is_a_quota_error_and_keeps_googles_reason():
+    llm, _ = make_llm(lambda r: httpx.Response(429, json={"error": {"message": "Resource has been exhausted"}}), max_retries=1)
+    with pytest.raises(LLMQuotaError, match="Resource has been exhausted"):
+        await llm.complete_json("s", "sys", "p")
+
+
+async def test_repeated_503_is_not_called_a_quota_problem():
+    llm, _ = make_llm(lambda r: httpx.Response(503, json={"error": {"message": "overloaded"}}), max_retries=1)
+    with pytest.raises(LLMError, match="overloaded") as err:
+        await llm.complete_json("s", "sys", "p")
+    assert not isinstance(err.value, LLMQuotaError)
