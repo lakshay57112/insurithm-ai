@@ -37,7 +37,7 @@ from ..ingest import chunk_page
 from ..models import Chunk
 from ..verify import DEFAULT_MIN_OVERLAP, verify_findings
 from .llm import LLM, LLMOutputError
-from .prompts import draft_prompt, investigate_prompt, DRAFT_SYSTEM, INVESTIGATE_SYSTEM, label
+from .prompts import chunks_for_draft, draft_prompt, investigate_prompt, DRAFT_SYSTEM, INVESTIGATE_SYSTEM, label
 from .tools import ToolError, Tools
 
 MAX_FINDINGS = 8
@@ -265,7 +265,12 @@ def build_graph(llm: LLM, tools: Tools, *, checkpointer: Any, max_steps: int = 4
         )
         reply = await llm.complete_json("draft", DRAFT_SYSTEM, prompt)
         findings = reply.get("findings")
+        update: dict[str, Any] = {}
+        _, left_out = chunks_for_draft(state["evidence"])
+        if left_out:  # never silent: the activity log says that the model did not see everything
+            update["trace"] = [*state.get("trace", []), {"action": "draft", "left_out_of_prompt": left_out}]
         return {
+            **update,
             "draft": {
                 "findings": findings[:MAX_FINDINGS] if isinstance(findings, list) else [],
                 "gaps": reply.get("gaps") if isinstance(reply.get("gaps"), list) else [],

@@ -8,6 +8,10 @@ It is a research project. It is not legal, medical or insurance advice, and it n
 
 ## Screenshots
 
+<p><img src="docs/images/demo.gif" alt="A 30 second walk through: type a question, load the sample letter, wait for the review, read each point above its quoted policy passage, then approve." width="720"></p>
+
+A 30 second walk through. The recording uses demo mode (`python examples/demo_server.py`), where the model is scripted so no API key is needed; with a real model the steps are the same but the review takes longer.
+
 <p><img src="docs/images/review.png" alt="The review screen: each point of the draft appeal sits above the policy passage it quotes, with page and clause. Two points the checker removed are listed with the reason." width="720"></p>
 
 The review screen. Each point sits above the exact policy passage it quotes. Points the checker could not back up are listed with the reason, and nothing is final until you approve.
@@ -107,6 +111,8 @@ What it shows: with this model the agent found more of the passages the cases ne
 
 What it does not show: about 6% of the claims the agent proposed were unsupported and the checker removed all of them, but the baseline proposed no unsupported claims in this run, so this run does not show the checker beating the baseline on that point. With 10 appeal cases, one case moves a score by 0.1. It is one run of one small model, model output varies from run to run, and the policy and cases were written by the same person. The agent still missed the right answer in 4 of the 10 appeal cases; why has not been analysed yet. Treat this as a check that the system behaves as designed and as a reason to test further, not as an accuracy figure.
 
+**What the first run exposed.** The agent found 15 of the 16 passages the cases need but cited only 11. Reading the code showed why: the drafting step showed the model only the first 24 pieces of evidence, sorted by page number, so when the agent had gathered more than that, the pages at the back of the policy (appeals and deadlines) were silently dropped. That is fixed (the draft now sees everything it gathered, and says so in the activity log if anything must be left out), with a test that fails on the old behaviour. The table above is from **before** the fix. A second run with the fixed code is needed before quoting new numbers.
+
 Retrieval alone (BM25 on the 30 answerable policy questions) has been measured: Recall@1 0.667, Recall@3 0.933, Recall@5 1.000, MRR 0.797.
 
 ## Quick start
@@ -200,7 +206,8 @@ It writes `evals/reports/comparison_<model>.json` and `.md`. The default pause b
 
 A full run is about 90 model calls (15 cases, one call for the baseline and about five for the agent), and the command prints a line for each. Things to know about the free tier:
 
-- **Each model has its own limit.** If Gemini answers that the limit is used up, the run stops at once, says so, and keeps every case that finished. Run the same command with `--resume` after the limit resets (daily limits usually reset overnight, Pacific time), or set another `GEMINI_MODEL` and start again. `--resume` only retries cases that have not finished.
+- **Each model has its own limit.** If Gemini answers that the limit is used up, the run stops at once, says so, and keeps every case that finished. Run the same command with `--resume` after the limit resets (daily limits usually reset overnight, Pacific time), or set another `GEMINI_MODEL` and start again. `--resume` only retries cases that have not finished, and it ignores saved progress made with different code, model or settings, so results from two versions are never mixed in one table.
+- **Why a case failed.** Under the table the report lists every case that was not fully right and why (never retrieved, retrieved but not cited, gave no appeal points); `.json` has the claims and citations behind each one.
 - **Overloaded models** (HTTP 503) and slow replies are retried a few times; a case that still fails is counted as a failure and the report is marked "Incomplete run". Do not quote an incomplete table. Run again with `--resume` to retry only those cases.
 - **Slow models.** A reply can take over a minute. The wait defaults to 120 seconds; raise it with `GEMINI_TIMEOUT_SECONDS`.
 - **Model names change.** Older models are retired for new accounts (you get a 404), so list the models your key can use and pick a current `flash` one rather than copying a name from here.

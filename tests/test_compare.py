@@ -246,3 +246,50 @@ def test_command_line_stops_cleanly_on_quota_then_resumes(monkeypatch, tmp_path,
     assert llm.calls == 1                                              # only the one case that was left
     report = json.loads((tmp_path / "comparison_stub-model.json").read_text())
     assert report["n_cases"] == 3 and report["systems"]["baseline"]["errors"] == 0
+
+
+# ----------------------------------------------------------------------------- explaining the misses
+def test_every_miss_gets_a_plain_reason():
+    from insurithm.evals.compare import miss_lines
+
+    cases = [
+        {"id": "A", "expected_outcome": "appeal", "expected": [
+            {"page": 4, "clause": "4.2", "passage": "room above the limit"},
+            {"page": 6, "clause": "6.6", "passage": "within 30 days"}]},
+        {"id": "B", "expected_outcome": "appeal", "expected": [{"page": 4, "clause": "4.2", "passage": "room above the limit"}]},
+        {"id": "N", "expected_outcome": "insufficient_evidence", "expected": []},
+        {"id": "OK", "expected_outcome": "appeal", "expected": [{"page": 4, "clause": "4.2", "passage": "room above the limit"}]},
+    ]
+    chunks = {
+        "c42": {"chunk_id": "c42", "doc_id": "pol", "page": 4, "clause_id": "4.2", "text": "occupies a room above the limit in 4.1"},
+        "c66": {"chunk_id": "c66", "doc_id": "pol", "page": 6, "clause_id": "6.6", "text": "you may appeal within 30 days"},
+    }
+    cited = {"claim": "x", "supported": True, "citations": [{"chunk_id": "c42", "quote": "q", "valid": True}]}
+    runs = [
+        CaseRun("A", "s", shipped=[cited], raw=[cited], pool={"c42": chunks["c42"]}),               # 6.6 never retrieved
+        CaseRun("B", "s", pool={"c42": chunks["c42"]}),                                              # found it, said nothing
+        CaseRun("N", "s", shipped=[cited], raw=[cited], pool={"c42": chunks["c42"]}),               # should have abstained
+        CaseRun("OK", "s", shipped=[cited], raw=[cited], pool={"c42": chunks["c42"]}),              # fully right
+    ]
+    report = {"systems": {"s": score(cases, runs)}}
+    assert miss_lines(report) == [
+        "s A: never retrieved 6.6 (page 6)",
+        "s B: gave no appeal points; retrieved but not cited 4.2 (page 4)",
+        "s N: gave 1 appeal point(s) where the evidence is not enough",
+    ]
+    retrieved_not_cited = score(cases[:1], [CaseRun("A", "s", shipped=[cited], raw=[cited], pool=chunks)])["per_case"][0]
+    assert retrieved_not_cited["why"] == "retrieved but not cited 6.6 (page 6)"
+    assert retrieved_not_cited["claims"][0]["cites"] == ["page 4, clause 4.2"]     # what it did cite, for the reader
+    assert "Cases that were not fully right" in render_markdown({**report, "model": "m", "run_at": "t", "n_cases": 4, "caveat": "c"})
+
+
+def test_saved_progress_from_other_code_is_flagged_and_not_used(tmp_path):
+    from insurithm.evals.compare import code_fingerprint
+
+    assert code_fingerprint() == code_fingerprint() and len(code_fingerprint()) == 16
+    path = tmp_path / "p.json"
+    Progress(path, "old-code").add(CaseRun("C01", "agent"))
+    stale = Progress(path, "new-code", resume=True)
+    assert stale.ignored and stale.done("agent") == {}
+    assert not Progress(path, "old-code", resume=True).ignored
+    assert not Progress(tmp_path / "missing.json", "k", resume=True).ignored

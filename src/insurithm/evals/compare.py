@@ -73,6 +73,18 @@ class CaseRun:
         return cls(**data)
 
 
+def code_fingerprint() -> str:
+    """Changes whenever the code that produces results changes, so results from older code are never mixed in."""
+    root = Path(__file__).resolve().parent.parent
+    files = sorted([*(root / "agent").glob("*.py"), *(root / "mcp_servers").glob("*.py"),
+                    *(root / n for n in ("verify.py", "retrieval.py", "facts.py", "ingest.py", "models.py"))])
+    digest = hashlib.sha256()
+    for f in files:
+        digest.update(f.name.encode())
+        digest.update(f.read_bytes().replace(b"\r\n", b"\n"))  # same hash whether git checked out CRLF or LF
+    return digest.hexdigest()[:16]
+
+
 class QuotaStopped(RuntimeError):
     """The model's usage limit ran out part-way through. Whatever finished before that is saved."""
 
@@ -82,13 +94,16 @@ class Progress:
 
     def __init__(self, path: Path | None, key: str, resume: bool = False):
         self.path, self.key = path, key
+        self.ignored = False  # True when a saved file was found but belongs to other code, model, settings or cases
         self.runs: dict[str, dict[str, CaseRun]] = {}
         if path and resume and path.exists():
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 data = {}
-            if isinstance(data, dict) and data.get("key") == key:  # same model, settings and cases
+            if isinstance(data, dict) and data.get("key") != key:
+                self.ignored = True
+            if isinstance(data, dict) and data.get("key") == key:  # same code, model, settings and cases
                 self.runs = {
                     system: {cid: CaseRun.from_dict(r) for cid, r in cases.items()}
                     for system, cases in data.get("runs", {}).items()
@@ -130,6 +145,19 @@ def _covered(run: CaseRun, expected: dict[str, Any]) -> bool:
     return False
 
 
+def _name(expected: dict[str, Any]) -> str:
+    return f"{expected.get('clause') or 'letter'} (page {expected['page']})"
+
+
+def _cites(run: CaseRun, finding: dict[str, Any]) -> list[str]:
+    out = []
+    for cit in finding["citations"]:
+        chunk = run.pool.get(cit["chunk_id"])
+        where = f"page {chunk['page']}" + (f", clause {chunk['clause_id']}" if chunk and chunk.get("clause_id") else "") if chunk else "unknown chunk"
+        out.append(where + ("" if cit["valid"] else " (quote did not check out)"))
+    return out
+
+
 def _rate(num: int, den: int) -> float | None:
     return round(num / den, 4) if den else None
 
@@ -152,13 +180,29 @@ def score(cases: list[dict[str, Any]], runs: list[CaseRun]) -> dict[str, Any]:
         exp_covered += covered
         ok = (not r.error) and covered == len(expected)
         correct_appeal += ok
+        never_found = [e for e in expected if not any(_passage_in(c, e) for c in policy_chunks)]
+        not_cited = [e for e in expected if e not in never_found and (r.error or not _covered(r, e))]
+        why = None
+        if r.error:
+            why = f"error: {r.error}"
+        elif not ok:
+            parts = []
+            if not r.shipped:
+                parts.append("gave no appeal points")
+            if never_found:
+                parts.append("never retrieved " + ", ".join(_name(e) for e in never_found))
+            if not_cited:
+                parts.append("retrieved but not cited " + ", ".join(_name(e) for e in not_cited))
+            why = "; ".join(parts)
         per_case.append({"case": r.case_id, "kind": "appeal", "correct": ok, "expected": len(expected),
-                         "in_pool": in_pool, "covered": covered, "shipped": len(r.shipped), "error": r.error})
+                         "in_pool": in_pool, "covered": covered, "shipped": len(r.shipped), "error": r.error, "why": why,
+                         "claims": [{"claim": f["claim"][:200], "supported": f["supported"], "cites": _cites(r, f)} for f in r.shipped]})
     correct_abstain = 0
     for r in abstain:
         ok = (not r.error) and not r.shipped
         correct_abstain += ok
-        per_case.append({"case": r.case_id, "kind": "abstain", "correct": ok, "shipped": len(r.shipped), "error": r.error})
+        why = None if ok else (f"error: {r.error}" if r.error else f"gave {len(r.shipped)} appeal point(s) where the evidence is not enough")
+        per_case.append({"case": r.case_id, "kind": "abstain", "correct": ok, "shipped": len(r.shipped), "error": r.error, "why": why})
 
     raw_claims = sum(len(r.raw) for r in runs)
     raw_unsupported = sum(1 for r in runs for f in r.raw if not f["supported"])
@@ -294,6 +338,9 @@ def render_markdown(report: dict[str, Any]) -> str:
     if any(report["systems"][s]["errors"] for s in systems):
         lines += ["", "> **Incomplete run.** Cases that errored are counted as failures here, so these numbers understate the "
                       "system. Rerun with `--resume` to retry only those cases before quoting any of this."]
+    misses = miss_lines(report)
+    if misses:
+        lines += ["", "Cases that were not fully right:", ""] + [f"- {m}" for m in misses]
     lines += ["", report["caveat"], ""]
     return "\n".join(lines)
 
@@ -347,6 +394,16 @@ class ProgressLLM:
         return result
 
 
+def miss_lines(report: dict[str, Any]) -> list[str]:
+    """Why each case that ran but was not fully right was not fully right (errors are listed by error_lines)."""
+    out = []
+    for system, data in report["systems"].items():
+        for row in data["per_case"]:
+            if not row.get("correct") and not row.get("error") and row.get("why"):
+                out.append(f"{system} {row['case']}: {row['why']}")
+    return out
+
+
 def error_lines(report: dict[str, Any]) -> list[str]:
     """One line per distinct failure, so a run where every case errored explains itself."""
     seen: dict[tuple[str, str], list[str]] = {}
@@ -374,10 +431,13 @@ def main() -> None:
     cases = load_cases(args.cases)[: args.limit]
     out_dir = Path(args.out_dir)
     slug = re.sub(r"[^A-Za-z0-9._-]+", "-", base.model)
-    key = hashlib.sha256(json.dumps([base.model, args.max_steps, DEFAULT_MIN_OVERLAP, [(c["id"], c["letter"]) for c in cases]]).encode()).hexdigest()
+    key = hashlib.sha256(json.dumps([code_fingerprint(), base.model, args.max_steps, DEFAULT_MIN_OVERLAP, [(c["id"], c["letter"]) for c in cases]]).encode()).hexdigest()
     progress = Progress(out_dir / f"progress_{slug}.json", key, args.resume)
     print(f"Running {len(cases)} case(s) with {base.model}. Each model call is listed below.", file=sys.stderr, flush=True)
-    if args.resume:
+    if args.resume and progress.ignored:
+        print("The saved progress was made with different code, model, settings or cases, so it was ignored "
+              "and everything runs again.", file=sys.stderr, flush=True)
+    elif args.resume:
         print(f"Resuming. Already finished: {progress.counts()}.", file=sys.stderr, flush=True)
 
     async def go() -> dict[str, Any]:
